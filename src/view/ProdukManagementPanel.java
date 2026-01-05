@@ -13,7 +13,6 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import model.*;
-import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -43,94 +42,190 @@ public class ProdukManagementPanel extends VBox {
     }
 
     private void initializeUI() {
-        setPadding(new Insets(30));
-        setSpacing(20);
-        setStyle("-fx-background-color: #ecf0f1;");
+        setPadding(new Insets(0));
+        setSpacing(25);
+        setStyle("-fx-background-color: transparent;");
 
-        // Header
+        // Header Section
+        VBox headerSection = createHeaderSection();
+        
+        // Search and Action Bar
+        HBox actionBar = createActionBar();
+        
+        // Table Container
+        VBox tableContainer = createTableContainer();
+
+        getChildren().addAll(headerSection, actionBar, tableContainer);
+    }
+
+    private VBox createHeaderSection() {
+        VBox headerBox = new VBox(8);
+        
         Label title = new Label("Manajemen Produk");
         title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
         title.setTextFill(Color.web("#2c3e50"));
-
-        // Toolbar
-        HBox toolBar = createToolBar();
-
-        // Table
-        tableView = createTable();
-
-        HBox headerBox = new HBox(title);
-        headerBox.setAlignment(Pos.CENTER_LEFT);
-
-        VBox contentBox = new VBox(15, toolBar, tableView);
-        getChildren().addAll(headerBox, contentBox);
+        
+        Label subtitle = new Label("Kelola data produk dan stok Anda");
+        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        subtitle.setTextFill(Color.web("#7f8c8d"));
+        
+        headerBox.getChildren().addAll(title, subtitle);
+        return headerBox;
     }
 
-    private HBox createToolBar() {
-        HBox toolBar = new HBox(15);
-        toolBar.setPadding(new Insets(15, 20, 15, 20));
-        toolBar.setStyle("-fx-background-color: white; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 0);");
+    private HBox createActionBar() {
+        HBox actionBar = new HBox(15);
+        actionBar.setAlignment(Pos.CENTER_LEFT);
+        actionBar.setPadding(new Insets(20));
+        actionBar.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 12; " +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 3);"
+        );
 
-        // Search
+        // Search Box
+        HBox searchBox = createSearchBox();
+        
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // Action Buttons
+        HBox buttonBox = createActionButtons();
+
+        actionBar.getChildren().addAll(searchBox, spacer, buttonBox);
+        return actionBar;
+    }
+
+    private HBox createSearchBox() {
+        HBox searchBox = new HBox(12);
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+        searchBox.setPadding(new Insets(10, 15, 10, 15));
+        searchBox.setStyle(
+            "-fx-background-color: #f8f9fa; " +
+            "-fx-background-radius: 10; " +
+            "-fx-border-color: #e1e8ed; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 10;"
+        );
+        searchBox.setPrefWidth(350);
+
         Label searchIcon = new Label("🔍");
-        searchIcon.setFont(Font.font(20));
+        searchIcon.setFont(Font.font(18));
 
         txtSearch = new TextField();
         txtSearch.setPromptText("Cari produk...");
-        txtSearch.setPrefWidth(300);
+        txtSearch.setFont(Font.font("Segoe UI", 13));
+        txtSearch.setStyle(
+            "-fx-background-color: transparent; " +
+            "-fx-border-color: transparent; " +
+            "-fx-prompt-text-fill: #95a5a6;"
+        );
+        HBox.setHgrow(txtSearch, Priority.ALWAYS);
         txtSearch.textProperty().addListener((obs, old, newVal) -> loadData(newVal));
 
-        HBox searchBox = new HBox(10, searchIcon, txtSearch);
-        searchBox.setAlignment(Pos.CENTER_LEFT);
+        // Focus effect
+        searchBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (txtSearch.isFocused()) {
+                searchBox.setStyle(
+                    "-fx-background-color: white; " +
+                    "-fx-background-radius: 10; " +
+                    "-fx-border-color: #3498db; " +
+                    "-fx-border-width: 2; " +
+                    "-fx-border-radius: 10;"
+                );
+            } else {
+                searchBox.setStyle(
+                    "-fx-background-color: #f8f9fa; " +
+                    "-fx-background-radius: 10; " +
+                    "-fx-border-color: #e1e8ed; " +
+                    "-fx-border-width: 1; " +
+                    "-fx-border-radius: 10;"
+                );
+            }
+        });
 
-        // Buttons
-        Button btnAdd = createStyledButton("➕ Tambah", "#2ecc71");
-        btnAdd.setOnAction(e -> showAddDialog());
-
-        Button btnEdit = createStyledButton("✏️ Edit", "#3498db");
-        btnEdit.setOnAction(e -> showEditDialog());
-
-        Button btnDelete = createStyledButton("🗑️ Hapus", "#e74c3c");
-        btnDelete.setOnAction(e -> deleteProduk());
-
-        HBox buttonBox = new HBox(10, btnAdd, btnEdit, btnDelete);
-        buttonBox.setAlignment(Pos.CENTER_RIGHT);
-
-        HBox.setHgrow(searchBox, Priority.ALWAYS);
-        toolBar.getChildren().addAll(searchBox, buttonBox);
-        return toolBar;
+        searchBox.getChildren().addAll(searchIcon, txtSearch);
+        return searchBox;
     }
 
-    private Button createStyledButton(String text, String bgColor) {
+    private HBox createActionButtons() {
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+
+        Button btnAdd = createModernButton("➕ Tambah", "#2ecc71", "#27ae60");
+        btnAdd.setOnAction(e -> showAddDialog());
+
+        Button btnEdit = createModernButton("✏ Edit", "#3498db", "#2980b9");
+        btnEdit.setOnAction(e -> showEditDialog());
+
+        Button btnDelete = createModernButton("🗑 Hapus", "#e74c3c", "#c0392b");
+        btnDelete.setOnAction(e -> deleteProduk());
+        
+        Button btnRefresh = createModernButton("🔄 Refresh", "#95a5a6", "#7f8c8d");
+        btnRefresh.setOnAction(e -> loadData(""));
+
+        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete, btnRefresh);
+        return buttonBox;
+    }
+
+    private Button createModernButton(String text, String normalColor, String hoverColor) {
         Button btn = new Button(text);
+        btn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        btn.setTextFill(Color.WHITE);
+        btn.setPadding(new Insets(10, 20, 10, 20));
         btn.setStyle(
-            "-fx-background-color: " + bgColor + "; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-weight: bold; " +
-            "-fx-font-size: 13px; " +
-            "-fx-padding: 8 16; " +
+            "-fx-background-color: " + normalColor + "; " +
+            "-fx-background-radius: 8; " +
             "-fx-cursor: hand;"
         );
-        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: " + darken(bgColor) + "; -fx-text-fill: white; -fx-font-weight: bold;"));
-        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: " + bgColor + "; -fx-text-fill: white; -fx-font-weight: bold;"));
+
+        btn.setOnMouseEntered(e -> {
+            btn.setStyle(
+                "-fx-background-color: " + hoverColor + "; " +
+                "-fx-background-radius: 8; " +
+                "-fx-cursor: hand; " +
+                "-fx-scale-x: 1.02; " +
+                "-fx-scale-y: 1.02;"
+            );
+        });
+
+        btn.setOnMouseExited(e -> {
+            btn.setStyle(
+                "-fx-background-color: " + normalColor + "; " +
+                "-fx-background-radius: 8; " +
+                "-fx-cursor: hand;"
+            );
+        });
+
         return btn;
     }
 
-    private String darken(String hex) {
-        if (hex.startsWith("#")) hex = hex.substring(1);
-        int r = Integer.parseInt(hex.substring(0, 2), 16);
-        int g = Integer.parseInt(hex.substring(2, 4), 16);
-        int b = Integer.parseInt(hex.substring(4, 6), 16);
-        r = Math.max(0, (int)(r * 0.8));
-        g = Math.max(0, (int)(g * 0.8));
-        b = Math.max(0, (int)(b * 0.8));
-        return String.format("#%02x%02x%02x", r, g, b);
+    private VBox createTableContainer() {
+        VBox container = new VBox();
+        container.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 12; " +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 3);"
+        );
+
+        tableView = createTable();
+        VBox.setVgrow(tableView, Priority.ALWAYS);
+
+        container.getChildren().add(tableView);
+        return container;
     }
 
     private TableView<Produk> createTable() {
         TableView<Produk> table = new TableView<>();
-        table.setPrefHeight(500);
+        table.setPrefHeight(550);
+        table.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-radius: 12; " +
+            "-fx-table-cell-border-color: transparent; " +
+            "-fx-padding: 15;"
+        );
 
-        // Kolom
+        // Kolom tetap seperti sebelumnya
         TableColumn<Produk, Long> colId = new TableColumn<>("ID");
         colId.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleObjectProperty<>(cell.getValue().getIdProduk())
@@ -141,35 +236,51 @@ public class ProdukManagementPanel extends VBox {
         colNama.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaKaos())
         );
+        colNama.setPrefWidth(250);
+        styleColumn(colNama);
 
         TableColumn<Produk, String> colMerk = new TableColumn<>("Merk");
         colMerk.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaMerk())
         );
+        colMerk.setPrefWidth(150);
+        styleColumn(colMerk);
 
         TableColumn<Produk, String> colTipe = new TableColumn<>("Tipe");
         colTipe.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaTipe())
         );
+        colTipe.setPrefWidth(150);
+        styleColumn(colTipe);
 
         TableColumn<Produk, String> colHargaJual = new TableColumn<>("Harga Jual");
         colHargaJual.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(currencyFormat.format(cell.getValue().getHargaJual()))
         );
+        colHargaJual.setPrefWidth(130);
+        styleColumn(colHargaJual);
 
         TableColumn<Produk, String> colHargaPokok = new TableColumn<>("Harga Pokok");
         colHargaPokok.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(currencyFormat.format(cell.getValue().getHargaPokok()))
         );
+        colHargaPokok.setPrefWidth(130);
+        styleColumn(colHargaPokok);
 
         TableColumn<Produk, String> colDibuat = new TableColumn<>("Dibuat");
         colDibuat.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(dateFormat.format(cell.getValue().getCreatedAt()))
         );
+        colDibuat.setPrefWidth(150);
+        styleColumn(colDibuat);
 
         table.getColumns().addAll(colId, colNama, colMerk, colTipe, colHargaJual, colHargaPokok, colDibuat);
-        table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         return table;
+    }
+
+    private void styleColumn(TableColumn<Produk, String> column) {
+        column.setStyle("-fx-alignment: CENTER-LEFT; -fx-font-size: 13px;");
     }
 
     private void loadData(String keyword) {
@@ -235,7 +346,6 @@ public class ProdukManagementPanel extends VBox {
     public static class ProdukFormDialog {
         private Produk produk;
         private boolean success = false;
-        private ProdukDAO produkDAO;
 
         public ProdukFormDialog(Produk produk) {
             this.produk = produk;
@@ -263,7 +373,7 @@ public class ProdukManagementPanel extends VBox {
 
             grid.add(new Label("Tipe:"), 0, row);
             ComboBox<Tipe> cbTipe = new ComboBox<>();
-            cbTipe.getItems().addAll(tipeList); // DINAMIS — diambil dari database
+            cbTipe.getItems().addAll(tipeList);
             grid.add(cbTipe, 1, row++);
 
             grid.add(new Label("Harga Jual:"), 0, row);
@@ -273,11 +383,6 @@ public class ProdukManagementPanel extends VBox {
             grid.add(new Label("Harga Pokok:"), 0, row);
             TextField txtHargaPokok = new TextField();
             grid.add(txtHargaPokok, 1, row++);
-
-            // 💡 HAPUS BERAT — karena tidak dipakai di tabel produk
-            // grid.add(new Label("Berat (kg):"), 0, row);
-            // TextField txtBerat = new TextField();
-            // grid.add(txtBerat, 1, row++);
 
             grid.add(new Label("Deskripsi:"), 0, row);
             TextArea txtDeskripsi = new TextArea();
@@ -322,11 +427,12 @@ public class ProdukManagementPanel extends VBox {
                     p.setDeskripsi(txtDeskripsi.getText().trim());
                     p.setSpesifikasi(txtSpesifikasi.getText().trim());
 
+                    ProdukDAO dao = new ProdukDAO(); // ✅ Perbaiki: jangan pakai field yang tidak diinisialisasi
                     boolean result;
                     if (produk == null) {
-                        result = produkDAO.tambahProduk(p); 
+                        result = dao.tambahProduk(p);
                     } else {
-                        result = produkDAO.updateProduk(p);
+                        result = dao.updateProduk(p);
                     }
 
                     if (result) {

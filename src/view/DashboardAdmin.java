@@ -1,5 +1,6 @@
 package view;
 
+import java.io.File;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -15,6 +16,8 @@ import model.User;
 
 import java.util.HashMap;
 import java.util.Map;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 // Custom container untuk menggantikan CardLayout
 class CardPane extends StackPane {
@@ -68,6 +71,7 @@ public class DashboardAdmin extends Application {
         cardContainer.addCard("ukuran", new UkuranManagementPanel());
         cardContainer.addCard("warna", new WarnaManagementPanel());
         cardContainer.addCard("produk", new ProdukManagementPanel(currentUser));
+        cardContainer.addCard("foto_produk", new FotoProdukManagementPanel());
         cardContainer.addCard("varian", new VarianManagementPanel());
         cardContainer.addCard("jam_operasional", new JamOperasionalManagementPanel());
 //        cardContainer.addCard("laporan", new LaporanManagementPanel(currentUser));
@@ -132,227 +136,281 @@ public class DashboardAdmin extends Application {
     }
 
     private VBox createSidebar(Stage primaryStage) {
-        // Sidebar utama
-        VBox sidebar = new VBox(8);
-        sidebar.setPrefWidth(280);
-        sidebar.setStyle(
-            "-fx-background-color: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);"
-        );
-        sidebar.setPadding(new Insets(0));
-        sidebar.setEffect(new javafx.scene.effect.DropShadow(15, Color.rgb(0, 0, 0, 0.3)));
+    // Sidebar utama
+    VBox sidebar = new VBox(8);
+    sidebar.setPrefWidth(280);
+    sidebar.setStyle(
+        "-fx-background-color: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);"
+    );
+    sidebar.setPadding(new Insets(0));
+    sidebar.setEffect(new javafx.scene.effect.DropShadow(15, Color.rgb(0, 0, 0, 0.3)));
 
-        // Header
-        VBox header = new VBox(8);
-        header.setAlignment(Pos.CENTER);
-        header.setPadding(new Insets(25, 20, 20, 20));
-        header.setStyle("-fx-background-color: rgba(52, 73, 94, 0.8);");
+    // Header
+    VBox header = new VBox(8);
+    header.setAlignment(Pos.CENTER);
+    header.setPadding(new Insets(25, 20, 20, 20));
+    header.setStyle("-fx-background-color: rgba(52, 73, 94, 0.8);");
 
-        HBox logoContainer = new HBox(12);
-        logoContainer.setAlignment(Pos.CENTER);
+    HBox logoContainer = new HBox(12);
+    logoContainer.setAlignment(Pos.CENTER);
 
-        Circle logoCircle = new Circle(18);
-        logoCircle.setFill(Color.web("#3498db"));
-        logoCircle.setStroke(Color.web("#2980b9"));
-        logoCircle.setStrokeWidth(2);
+    Label logo = new Label("DistroZone");
+    logo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+    logo.setTextFill(Color.WHITE);
 
-        Label logo = new Label("DistroZone");
-        logo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        logo.setTextFill(Color.WHITE);
+    logoContainer.getChildren().add(logo);
+    header.getChildren().add(logoContainer);
 
-        logoContainer.getChildren().addAll(logoCircle, logo);
-        header.getChildren().add(logoContainer);
+    // User Card
+ // User Card — DIPERBAIKI: Avatar + Nama di sebelah kanan
+VBox userCard = new VBox(10);
+userCard.setAlignment(Pos.CENTER);
+userCard.setPadding(new Insets(15));
+userCard.setStyle(
+    "-fx-background-color: rgba(52, 152, 219, 0.15); " +
+    "-fx-background-radius: 12; " +
+    "-fx-border-color: rgba(52, 152, 219, 0.3); " +
+    "-fx-border-width: 1; " +
+    "-fx-border-radius: 12;"
+);
+userCard.setMaxWidth(240);
+VBox.setMargin(userCard, new Insets(15, 20, 15, 20));
 
-        // User Card
-        VBox userCard = new VBox(10);
-        userCard.setAlignment(Pos.CENTER);
-        userCard.setPadding(new Insets(15));
-        userCard.setStyle(
-            "-fx-background-color: rgba(52, 152, 219, 0.15); " +
-            "-fx-background-radius: 12; " +
-            "-fx-border-color: rgba(52, 152, 219, 0.3); " +
-            "-fx-border-width: 1; " +
-            "-fx-border-radius: 12;"
-        );
-        userCard.setMaxWidth(240);
-        VBox.setMargin(userCard, new Insets(15, 20, 15, 20));
+// Gunakan HBox untuk avatar + teks sejajar horizontal
+HBox userInfo = new HBox(12);
+userInfo.setAlignment(Pos.CENTER_LEFT);
+userInfo.setPadding(new Insets(0)); // Padding sudah diatur di userCard
 
-        StackPane avatar = new StackPane();
-        Circle avatarCircle = new Circle(28);
-        avatarCircle.setFill(Color.web("#3498db"));
-        avatarCircle.setStroke(Color.WHITE);
-        avatarCircle.setStrokeWidth(2.5);
+StackPane avatar = new StackPane();
+Circle avatarCircle = new Circle(28);
+avatarCircle.setFill(Color.web("#3498db"));
+avatarCircle.setStroke(Color.WHITE);
+avatarCircle.setStrokeWidth(2.5);
 
-        Label userIcon = new Label("👤");
-        userIcon.setFont(Font.font(26));
+Label userIcon = new Label("👤");
+userIcon.setFont(Font.font(26));
 
-        avatar.getChildren().addAll(avatarCircle, userIcon);
+avatar.getChildren().addAll(avatarCircle, userIcon);
 
-        Label userName = new Label(currentUser.getNama());
-        userName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-        userName.setTextFill(Color.WHITE);
+Label userName = new Label(currentUser.getNama());
+userName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+userName.setTextFill(Color.WHITE);
 
-        userCard.getChildren().addAll(avatar, userName);
+userInfo.getChildren().addAll(avatar, userName);
 
-        // Menu Items — DIBUNGKUS SCROLLPANE
-        ScrollPane menuScroll = new ScrollPane();
-        menuScroll.setFitToWidth(true);
-        menuScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-        menuScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // Hanya vertical scroll
+// Masukkan HBox ke dalam VBox (untuk menjaga struktur userCard)
+userCard.getChildren().add(userInfo);
 
-        // 🎯 CUSTOM SCROLLBAR STYLE — TIPIS & KAMUFLASE
-        menuScroll.getStyleClass().add("sidebar-scroll");
+    // Menu Items — DIBUNGKUS SCROLLPANE
+    ScrollPane menuScroll = new ScrollPane();
+    menuScroll.setFitToWidth(true);
+    menuScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+    menuScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 
-        // Isi menu items
-        VBox menuContainer = new VBox(4);
-        menuContainer.setPadding(new Insets(15, 15, 15, 15));
+    menuScroll.getStyleClass().add("sidebar-scroll");
 
-        menuContainer.getChildren().addAll(
-            createMenuItem("🏠", "Dashboard", "dashboard", true),
-            createMenuItem("👥", "Karyawan", "karyawan", false),
-            createMenuItem("🏷️", "Merk", "merk", false),
-            createMenuItem("📋", "Tipe Kaos", "tipe", false),
-            createMenuItem("📏", "Ukuran", "ukuran", false),
-            createMenuItem("🎨", "Warna", "warna", false),
-            createMenuItem("📦", "Produk", "produk", false),
-            createMenuItem("🎯", "Varian Produk", "varian", false),
-            createMenuItem("🕐", "Jam Operasional", "jam_operasional", false),
-            createMenuItem("📊", "Laporan", "laporan", false)
-        );
+    // Isi menu items — KELOMPOK BERDASARKAN JUDUL
+    VBox menuContainer = new VBox(4);
+    menuContainer.setPadding(new Insets(15, 15, 15, 15));
 
-        menuScroll.setContent(menuContainer);
+    // --- DASHBOARD (di luar Master) ---
+    menuContainer.getChildren().add(createSectionHeader("Dashboard", "🏠"));
+    menuContainer.getChildren().add(
+        createMenuItem("Dashboard", "dashboard", true)
+    );
 
-        // Tombol Logout
-        Button btnLogout = new Button("🚪  Keluar");
-        btnLogout.setStyle(
-            "-fx-background-color: #e74c3c; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 13 0; " +
-            "-fx-background-radius: 10; " +
-            "-fx-cursor: hand;"
-        );
-        btnLogout.setMaxWidth(Double.MAX_VALUE);
+    // --- MASTER ---
+    menuContainer.getChildren().add(createSectionHeader("Master", "📚"));
+    menuContainer.getChildren().addAll(
+        createMenuItem("Merk", "merk", false),
+        createMenuItem("Tipe", "tipe", false),
+        createMenuItem("Ukuran", "ukuran", false),
+        createMenuItem("Warna", "warna", false),
+        createMenuItem("Produk", "produk", false),
+        createMenuItem("Foto Produk", "foto_produk", false),
+        createMenuItem("Varian Produk", "varian", false),
+        createMenuItem("Jam Operasional", "jam_operasional", false)
+    );
 
-        btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(
-            "-fx-background-color: #c0392b; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 13 0; " +
-            "-fx-background-radius: 10; " +
-            "-fx-cursor: hand; " +
-            "-fx-scale-x: 1.02; -fx-scale-y: 1.02;"
-        ));
+    // --- SETTING ---
+    menuContainer.getChildren().add(createSectionHeader("Setting", "⚙️"));
+    menuContainer.getChildren().add(
+        createMenuItem("Karyawan", "karyawan", false)
+    );
 
-        btnLogout.setOnMouseExited(e -> btnLogout.setStyle(
-            "-fx-background-color: #e74c3c; " +
-            "-fx-text-fill: white; " +
-            "-fx-font-size: 14px; " +
-            "-fx-font-weight: bold; " +
-            "-fx-padding: 13 0; " +
-            "-fx-background-radius: 10; " +
-            "-fx-cursor: hand;"
-        ));
+    // --- LAPORAN ---
+    menuContainer.getChildren().add(createSectionHeader("Laporan", "📊"));
+    menuContainer.getChildren().add(
+        createMenuItem("Laporan", "laporan", false)
+    );
 
-        btnLogout.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Konfirmasi Logout");
-            alert.setHeaderText(null);
-            alert.setContentText("Apakah Anda yakin ingin keluar?");
-            if (alert.showAndWait().get() == ButtonType.OK) {
-                primaryStage.close();
+    menuScroll.setContent(menuContainer);
+
+    // Tombol Logout
+    Button btnLogout = new Button("🚪  Keluar");
+    btnLogout.setStyle(
+        "-fx-background-color: #e74c3c; " +
+        "-fx-text-fill: white; " +
+        "-fx-font-size: 14px; " +
+        "-fx-font-weight: bold; " +
+        "-fx-padding: 13 0; " +
+        "-fx-background-radius: 10; " +
+        "-fx-cursor: hand;"
+    );
+    btnLogout.setMaxWidth(Double.MAX_VALUE);
+
+    btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(
+        "-fx-background-color: #c0392b; " +
+        "-fx-text-fill: white; " +
+        "-fx-font-size: 14px; " +
+        "-fx-font-weight: bold; " +
+        "-fx-padding: 13 0; " +
+        "-fx-background-radius: 10; " +
+        "-fx-cursor: hand; " +
+        "-fx-scale-x: 1.02; -fx-scale-y: 1.02;"
+    ));
+
+    btnLogout.setOnMouseExited(e -> btnLogout.setStyle(
+        "-fx-background-color: #e74c3c; " +
+        "-fx-text-fill: white; " +
+        "-fx-font-size: 14px; " +
+        "-fx-font-weight: bold; " +
+        "-fx-padding: 13 0; " +
+        "-fx-background-radius: 10; " +
+        "-fx-cursor: hand;"
+    ));
+
+    btnLogout.setOnAction(e -> {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Konfirmasi Logout");
+        alert.setHeaderText(null);
+        alert.setContentText("Apakah Anda yakin ingin keluar?");
+
+        if (alert.showAndWait().get() == ButtonType.OK) {
+            // Tutup stage dashboard
+            primaryStage.close();
+
+            // Buka kembali halaman login
+            try {
+                // Buat instance LoginPage
+                LoginPage loginPage = new LoginPage();
+
+                // Buat stage baru untuk login
+                Stage loginStage = new Stage();
+                loginPage.start(loginStage); // Panggil start() dari LoginPage
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                System.err.println("Gagal membuka halaman login.");
             }
-        });
+        }
+    });
 
-        VBox logoutContainer = new VBox(btnLogout);
-        logoutContainer.setPadding(new Insets(15, 20, 20, 20));
+    VBox logoutContainer = new VBox(btnLogout);
+    logoutContainer.setPadding(new Insets(15, 20, 20, 20));
 
-        // Gabungkan semua ke sidebar
-        sidebar.getChildren().addAll(header, userCard, menuScroll, logoutContainer);
+    // Gabungkan semua ke sidebar
+    sidebar.getChildren().addAll(header, userCard, menuScroll, logoutContainer);
 
-        return sidebar;
-    }
+    return sidebar;
+}
 
-    private HBox createMenuItem(String icon, String text, String id, boolean isActive) {
-        HBox menuItem = new HBox(12);
-        menuItem.setAlignment(Pos.CENTER_LEFT);
-        menuItem.setPadding(new Insets(12, 15, 12, 15));
+// MODIFIKASI: createSectionHeader dengan ikon, tanpa background
+private HBox createSectionHeader(String title, String icon) {
+    HBox header = new HBox(8);
+    header.setAlignment(Pos.CENTER_LEFT);
+    header.setPadding(new Insets(8, 15, 8, 15)); // Padding lebih kecil
+
+    Label iconLabel = new Label(icon);
+    iconLabel.setFont(Font.font(16));
+    iconLabel.setTextFill(Color.web("#bdc3c7"));
+
+    Label titleLabel = new Label(title);
+    titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+    titleLabel.setTextFill(Color.web("#bdc3c7"));
+
+    header.getChildren().addAll(iconLabel, titleLabel);
+
+    // Tidak ada background — hanya teks dan ikon
+    return header;
+}
+
+// MODIFIKASI: createMenuItem TANPA ICON (tetap sama seperti sebelumnya)
+private HBox createMenuItem(String text, String id, boolean isActive) {
+    HBox menuItem = new HBox(12);
+    menuItem.setAlignment(Pos.CENTER_LEFT);
+    menuItem.setPadding(new Insets(12, 15, 12, 15));
+    menuItem.setStyle(
+        isActive ?
+        "-fx-background-color: rgba(52, 152, 219, 0.2); " +
+        "-fx-background-radius: 10; " +
+        "-fx-cursor: hand; " +
+        "-fx-border-color: #3498db; " +
+        "-fx-border-width: 0 0 0 3; " +
+        "-fx-border-radius: 10;" :
+        "-fx-background-color: transparent; " +
+        "-fx-background-radius: 10; " +
+        "-fx-cursor: hand;"
+    );
+
+    if (isActive) selectedMenuItem = menuItem;
+
+    Label textLabel = new Label(text);
+    textLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 14));
+    textLabel.setTextFill(isActive ? Color.WHITE : Color.web("#bdc3c7"));
+
+    menuItem.getChildren().add(textLabel);
+
+    menuItem.setOnMouseEntered(e -> {
+        if (menuItem != selectedMenuItem) {
+            menuItem.setStyle(
+                "-fx-background-color: rgba(255, 255, 255, 0.08); " +
+                "-fx-background-radius: 10; " +
+                "-fx-cursor: hand;"
+            );
+            textLabel.setTextFill(Color.WHITE);
+        }
+    });
+
+    menuItem.setOnMouseExited(e -> {
+        if (menuItem != selectedMenuItem) {
+            menuItem.setStyle(
+                "-fx-background-color: transparent; " +
+                "-fx-background-radius: 10; " +
+                "-fx-cursor: hand;"
+            );
+            textLabel.setTextFill(Color.web("#bdc3c7"));
+        }
+    });
+
+    menuItem.setOnMouseClicked(e -> {
+        if (selectedMenuItem != null) {
+            selectedMenuItem.setStyle(
+                "-fx-background-color: transparent; " +
+                "-fx-background-radius: 10; " +
+                "-fx-cursor: hand;"
+            );
+            Label prevText = (Label) selectedMenuItem.getChildren().get(0);
+            prevText.setTextFill(Color.web("#bdc3c7"));
+        }
+
+        selectedMenuItem = menuItem;
         menuItem.setStyle(
-            isActive ?
             "-fx-background-color: rgba(52, 152, 219, 0.2); " +
             "-fx-background-radius: 10; " +
             "-fx-cursor: hand; " +
             "-fx-border-color: #3498db; " +
             "-fx-border-width: 0 0 0 3; " +
-            "-fx-border-radius: 10;" :
-            "-fx-background-color: transparent; " +
-            "-fx-background-radius: 10; " +
-            "-fx-cursor: hand;"
+            "-fx-border-radius: 10;"
         );
+        textLabel.setTextFill(Color.WHITE);
 
-        if (isActive) selectedMenuItem = menuItem;
+        // Tampilkan kartu sesuai id
+        cardContainer.showCard(id);
+    });
 
-        Label iconLabel = new Label(icon);
-        iconLabel.setFont(Font.font(17));
-        iconLabel.setMinWidth(25);
-
-        Label textLabel = new Label(text);
-        textLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 14));
-        textLabel.setTextFill(isActive ? Color.WHITE : Color.web("#bdc3c7"));
-
-        menuItem.getChildren().addAll(iconLabel, textLabel);
-
-        menuItem.setOnMouseEntered(e -> {
-            if (menuItem != selectedMenuItem) {
-                menuItem.setStyle(
-                    "-fx-background-color: rgba(255, 255, 255, 0.08); " +
-                    "-fx-background-radius: 10; " +
-                    "-fx-cursor: hand;"
-                );
-                textLabel.setTextFill(Color.WHITE);
-            }
-        });
-
-        menuItem.setOnMouseExited(e -> {
-            if (menuItem != selectedMenuItem) {
-                menuItem.setStyle(
-                    "-fx-background-color: transparent; " +
-                    "-fx-background-radius: 10; " +
-                    "-fx-cursor: hand;"
-                );
-                textLabel.setTextFill(Color.web("#bdc3c7"));
-            }
-        });
-
-        menuItem.setOnMouseClicked(e -> {
-            if (selectedMenuItem != null) {
-                selectedMenuItem.setStyle(
-                    "-fx-background-color: transparent; " +
-                    "-fx-background-radius: 10; " +
-                    "-fx-cursor: hand;"
-                );
-                Label prevText = (Label) selectedMenuItem.getChildren().get(1);
-                prevText.setTextFill(Color.web("#bdc3c7"));
-            }
-
-            selectedMenuItem = menuItem;
-            menuItem.setStyle(
-                "-fx-background-color: rgba(52, 152, 219, 0.2); " +
-                "-fx-background-radius: 10; " +
-                "-fx-cursor: hand; " +
-                "-fx-border-color: #3498db; " +
-                "-fx-border-width: 0 0 0 3; " +
-                "-fx-border-radius: 10;"
-            );
-            textLabel.setTextFill(Color.WHITE);
-
-            // Tampilkan kartu sesuai id
-            cardContainer.showCard(id);
-        });
-
-        return menuItem;
-    }
+    return menuItem;
+}
 
     private VBox createEnhancedStatCard(String title, String value, String icon, String colorHex) {
         VBox card = new VBox(15);

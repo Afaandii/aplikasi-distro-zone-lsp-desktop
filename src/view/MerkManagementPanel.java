@@ -143,13 +143,16 @@ public class MerkManagementPanel extends VBox {
         Button btnAdd = createModernButton("➕ Tambah", "#2ecc71", "#27ae60");
         btnAdd.setOnAction(e -> showAddDialog());
 
-        Button btnEdit = createModernButton("✏️ Edit", "#3498db", "#2980b9");
+        Button btnEdit = createModernButton("✏ Edit", "#3498db", "#2980b9");
         btnEdit.setOnAction(e -> showEditDialog());
 
-        Button btnDelete = createModernButton("🗑️ Hapus", "#e74c3c", "#c0392b");
+        Button btnDelete = createModernButton("🗑 Hapus", "#e74c3c", "#c0392b");
         btnDelete.setOnAction(e -> deleteMerk());
+        
+        Button btnRefresh = createModernButton("🔄 Refresh", "#95a5a6", "#7f8c8d");
+        btnRefresh.setOnAction(e -> loadData(""));
 
-        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete);
+        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete, btnRefresh);
         return buttonBox;
     }
 

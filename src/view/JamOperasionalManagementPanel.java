@@ -149,8 +149,11 @@ public class JamOperasionalManagementPanel extends VBox {
 
         Button btnDelete = createModernButton("🚫 Tutup", "#e74c3c", "#c0392b");
         btnDelete.setOnAction(e -> closeJamOperasional());
+        
+        Button btnRefresh = createModernButton("🔄 Refresh", "#95a5a6", "#7f8c8d");
+        btnRefresh.setOnAction(e -> loadData(""));
 
-        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete);
+        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete, btnRefresh);
         return buttonBox;
     }
 
