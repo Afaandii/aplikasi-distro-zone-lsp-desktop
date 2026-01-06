@@ -153,4 +153,91 @@ public class JamOperasionalDAO {
             default: return "";
         }
     }
+    
+    /**
+    * Cek apakah toko buka untuk layanan offline (desktop) — ambil dari DB
+    */
+    public boolean isJamOperasionalOffline() {
+        LocalDateTime now = LocalDateTime.now();
+        DayOfWeek dayOfWeek = now.getDayOfWeek();
+        String hari = getDayName(dayOfWeek);
+        LocalTime currentTime = now.toLocalTime();
+
+        String sql = "SELECT jam_buka, jam_tutup, status FROM jam_operasional " +
+                     "WHERE LOWER(hari) = LOWER(?) AND tipe_layanan = 'store'";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, hari);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String status = rs.getString("status");
+                if (!"buka".equalsIgnoreCase(status)) {
+                    return false;
+                }
+
+                Time jamBuka = rs.getTime("jam_buka");
+                Time jamTutup = rs.getTime("jam_tutup");
+
+                LocalTime openTime = jamBuka.toLocalTime();
+                LocalTime closeTime = jamTutup.toLocalTime();
+
+                return !currentTime.isBefore(openTime) && !currentTime.isAfter(closeTime);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false; // Default: tutup
+    }
+    
+    /**
+    * Cek jam operasional offline + kembalikan pesan alasan
+    */
+    public String checkJamOperasionalOfflineMessage() {
+     LocalDateTime now = LocalDateTime.now();
+     DayOfWeek dayOfWeek = now.getDayOfWeek();
+     String hari = getDayName(dayOfWeek);
+     LocalTime currentTime = now.toLocalTime();
+
+     String sql = "SELECT jam_buka, jam_tutup, status FROM jam_operasional " +
+                  "WHERE LOWER(hari) = LOWER(?) AND tipe_layanan = 'store'";
+
+     try (Connection conn = DatabaseConnection.getConnection();
+          PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+         stmt.setString(1, hari);
+         ResultSet rs = stmt.executeQuery();
+
+         if (rs.next()) {
+             String status = rs.getString("status");
+             Time jamBuka = rs.getTime("jam_buka");
+             Time jamTutup = rs.getTime("jam_tutup");
+
+             // 🔴 KHUSUS HARI LIBUR (Senin)
+             if ("libur".equalsIgnoreCase(status)) {
+                 return "Mohon Maaf, toko hari ini sedang libur!\nSilakan kembali esok hari.";
+             }
+
+             LocalTime openTime = jamBuka.toLocalTime();
+             LocalTime closeTime = jamTutup.toLocalTime();
+
+             // 🔴 DI LUAR JAM OPERASIONAL
+             if ("tutup".equalsIgnoreCase(status) || currentTime.isBefore(openTime) || currentTime.isAfter(closeTime)) {
+                 return "Mohon Maaf, toko tidak beroperasi di luar jam operasional.\n" +
+                        "Jam buka: 10:00 - 20:00";
+             }
+
+             // ✅ TOKO BUKA
+             return null;
+         }
+
+     } catch (SQLException e) {
+         e.printStackTrace();
+         return "Gagal memeriksa jam operasional toko.";
+     }
+
+     return "Jam operasional toko belum diatur.";
+    }
 }
