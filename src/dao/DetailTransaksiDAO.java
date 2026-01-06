@@ -59,4 +59,19 @@ public class DetailTransaksiDAO {
         }
         return details;
     }
+    
+    public Long getTotalSubtotalByTransaksi(Long idTransaksi) {
+        String sql = "SELECT COALESCE(SUM(subtotal), 0) as total FROM detail_transaksi WHERE id_transaksi = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idTransaksi);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("total");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0L;
+    }
 }

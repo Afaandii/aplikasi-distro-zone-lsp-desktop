@@ -15,6 +15,8 @@ public class Varian {
     private String namaUkuran;
     private String namaWarna;
     private String namaProduk;
+    private Long hargaJual;
+    private Long hargaPokok;
     
     public Varian() {}
     
@@ -47,5 +49,17 @@ public class Varian {
     
     public String getNamaProduk() { return namaProduk; }
     public void setNamaProduk(String namaProduk) { this.namaProduk = namaProduk; }
+    
+    
+    public Long getHargaJual() { return hargaJual; }
+    public void setHargaJual(Long hargaJual) { this.hargaJual = hargaJual; }
+    
+    public Long getHargaPokok() { return hargaPokok; }
+    public void setHargaPokok(Long hargaPokok) { this.hargaPokok = hargaPokok; }
+    
+    @Override
+    public String toString() {
+        return namaUkuran + " - " + namaWarna + " (Stok: " + stokKaos + ")";
+    }
     
 }

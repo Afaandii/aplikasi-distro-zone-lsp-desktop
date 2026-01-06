@@ -20,6 +20,7 @@ public class VarianDAO {
                 "p.nama_kaos AS nama_produk, " +
                 "u.nama_ukuran, " +
                 "w.nama_warna, " +
+                "p.harga_jual, p.harga_pokok, " +
                 "v.created_at, v.updated_at " +
                 "FROM varian v " +
                 "JOIN produk p ON v.id_produk = p.id_produk " +
@@ -45,6 +46,8 @@ public class VarianDAO {
                 varian.setNamaProduk(rs.getString("nama_produk")); // Tambahkan di model
                 varian.setNamaUkuran(rs.getString("nama_ukuran"));
                 varian.setNamaWarna(rs.getString("nama_warna"));
+                varian.setHargaJual(rs.getLong("harga_jual"));
+                varian.setHargaPokok(rs.getLong("harga_pokok"));
 
                 list.add(varian);
             }
@@ -63,6 +66,7 @@ public class VarianDAO {
                 "p.nama_kaos AS nama_produk, " +
                 "u.nama_ukuran, " +
                 "w.nama_warna, " +
+                "p.harga_jual, p.harga_pokok, " +
                 "v.created_at, v.updated_at " +
                 "FROM varian v " +
                 "JOIN produk p ON v.id_produk = p.id_produk " +
@@ -90,6 +94,8 @@ public class VarianDAO {
                     varian.setNamaProduk(rs.getString("nama_produk"));
                     varian.setNamaUkuran(rs.getString("nama_ukuran"));
                     varian.setNamaWarna(rs.getString("nama_warna"));
+                    varian.setHargaJual(rs.getLong("harga_jual"));
+                    varian.setHargaPokok(rs.getLong("harga_pokok"));
 
                     list.add(varian);
                 }
@@ -197,4 +203,28 @@ public class VarianDAO {
         }
         return false;
     }
+    
+    /**
+    * Update stok varian dengan mengurangi jumlah tertentu
+    * @param idVarian ID varian yang akan dikurangi stoknya
+    * @param jumlahDikurangi Jumlah stok yang akan dikurangi (harus positif)
+    * @return true jika berhasil, false jika gagal
+    */
+   public boolean updateStokVarian(Long idVarian, int jumlahDikurangi) {
+       String sql = "UPDATE varian SET stok_kaos = stok_kaos - ? WHERE id_varian = ? AND stok_kaos >= ?";
+
+       try (Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)) {
+
+           ps.setInt(1, jumlahDikurangi);
+           ps.setLong(2, idVarian);
+           ps.setInt(3, jumlahDikurangi); // Pastikan stok cukup
+
+           return ps.executeUpdate() > 0;
+
+       } catch (SQLException e) {
+           e.printStackTrace();
+           return false;
+       }
+   }
 }

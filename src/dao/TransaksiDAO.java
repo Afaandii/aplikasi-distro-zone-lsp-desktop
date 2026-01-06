@@ -191,4 +191,18 @@ public class TransaksiDAO {
         transaksi.setCreatedAt(rs.getTimestamp("created_at"));
         return transaksi;
     }
+    
+    
+    public boolean updateStatusTransaksi(Long idTransaksi, String status) {
+        String sql = "UPDATE transaksi SET status_transaksi = ?, updated_at = NOW() WHERE id_transaksi = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, status);
+            stmt.setLong(2, idTransaksi);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
