@@ -19,6 +19,9 @@ public class Produk {
     // Relasi
     private String namaMerk;
     private String namaTipe;
+    private String warna;
+    private String ukuran;
+    private int stok;
     
     public Produk() {}
     
@@ -60,6 +63,15 @@ public class Produk {
     
     public String getNamaTipe() { return namaTipe; }
     public void setNamaTipe(String namaTipe) { this.namaTipe = namaTipe; }
+    
+    public String getWarna() { return warna; }
+    public void setWarna(String warna) { this.warna = warna; }
+
+    public String getUkuran() { return ukuran; }
+    public void setUkuran(String ukuran) { this.ukuran = ukuran; }
+    
+    public int getStok() { return stok; }
+    public void setStok(int stok) { this.stok = stok; }
     
     @Override
     public String toString() {

@@ -328,7 +328,21 @@ public class LoginPage extends Application {
                             loginStage.close();
                             try {
                                 Stage dashboardStage = new Stage();
-                                new DashboardAdmin(user).start(dashboardStage);
+                                
+                                // 🔑 LOGIC REDIRECT BERDASARKAN ROLE
+                                String roleName = user.getNamaRole(); // Sudah di-join di DAO
+                                
+                                if ("Admin".equals(roleName)) {
+                                    new DashboardAdmin(user).start(dashboardStage);
+                                } else if ("Kasir".equals(roleName)) {
+                                    new DashboardKasirApp(user).start(dashboardStage);
+                                } else {
+                                    // Optional: Handle role lain atau default
+                                    new Alert(Alert.AlertType.WARNING, 
+                                        "Peran tidak dikenali: " + roleName + ". Mengarahkan ke Dashboard Admin.").showAndWait();
+                                    new DashboardAdmin(user).start(dashboardStage);
+                                }
+
                             } catch (Exception ex) {
                                 ex.printStackTrace();
                                 new Alert(Alert.AlertType.ERROR, "Gagal membuka dashboard: " + ex.getMessage()).show();
