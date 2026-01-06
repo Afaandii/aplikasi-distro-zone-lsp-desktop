@@ -1,5 +1,6 @@
 package view;
 
+import dao.JamOperasionalDAO;
 import javafx.animation.FadeTransition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
@@ -16,6 +17,10 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import model.User;
 import dao.UserDAO;
+import java.time.DayOfWeek;
+import java.time.LocalTime;
+import java.util.List;
+import model.JamOperasional;
 
 public class LoginPage extends Application {
     private TextField txtUsername;
@@ -290,12 +295,55 @@ public class LoginPage extends Application {
 
         return button;
     }
+    
+    private String getDayNameIndonesian(DayOfWeek dayOfWeek) {
+        switch (dayOfWeek) {
+            case MONDAY:    return "Senin";
+            case TUESDAY:   return "Selasa";
+            case WEDNESDAY: return "Rabu";
+            case THURSDAY:  return "Kamis";
+            case FRIDAY:    return "Jumat";
+            case SATURDAY:  return "Sabtu";
+            case SUNDAY:    return "Minggu";
+            default:        return "";
+        }
+    }
+    
+    /**
+    * Cek apakah toko buka untuk layanan offline (desktop)
+    * Aturan LSP: Buka 10.00 - 20.00, Hari Senin Libur
+    */
+    private boolean isJamOperasionalOffline() {
+        // Gunakan data dari database
+        JamOperasionalDAO joDAO = new JamOperasionalDAO();
+        List<JamOperasional> list = joDAO.getAllJamOperasional();
+
+        LocalTime now = LocalTime.now();
+        DayOfWeek dayOfWeek = DayOfWeek.from(java.time.LocalDate.now());
+        String hariIndo = getDayNameIndonesian(dayOfWeek);
+
+        for (JamOperasional jo : list) {
+            if ("store".equalsIgnoreCase(jo.getTipeLayanan())) {
+                if (jo.getHari().equalsIgnoreCase(hariIndo)) {
+                    if ("buka".equalsIgnoreCase(jo.getStatus())) {
+                        LocalTime openTime = jo.getJamBuka().toLocalTime();
+                        LocalTime closeTime = jo.getJamTutup().toLocalTime();
+                        return !now.isBefore(openTime) && !now.isAfter(closeTime);
+                    } else {
+                        return false; // Status "tutup"
+                    }
+                }
+            }
+        }
+
+        // Default: tutup jika tidak ditemukan
+        return false;
+    }
 
     private void handleLogin(Stage loginStage) {
         String username = txtUsername.getText().trim();
         String password = txtPassword.getText();
 
-        // Reset error
         lblError.setVisible(false);
 
         if (username.isEmpty() || password.isEmpty()) {
@@ -304,14 +352,12 @@ public class LoginPage extends Application {
             return;
         }
 
-        // Disable button saat loading
         btnLogin.setDisable(true);
         btnLogin.setText("MEMPROSES...");
 
-        // Simulasi loading
         new Thread(() -> {
             try {
-                Thread.sleep(500); // Simulasi delay
+                Thread.sleep(500);
 
                 User user = userDAO.login(username, password);
 
@@ -319,47 +365,55 @@ public class LoginPage extends Application {
                     btnLogin.setDisable(false);
                     btnLogin.setText("MASUK");
 
-                    if (user != null) {
-                        // Success animation
-                        FadeTransition fade = new FadeTransition(Duration.millis(300), loginStage.getScene().getRoot());
-                        fade.setFromValue(1.0);
-                        fade.setToValue(0.0);
-                        fade.setOnFinished(e -> {
-                            loginStage.close();
-                            try {
-                                Stage dashboardStage = new Stage();
-                                
-                                // 🔑 LOGIC REDIRECT BERDASARKAN ROLE
-                                String roleName = user.getNamaRole(); // Sudah di-join di DAO
-                                
-                                if ("Admin".equals(roleName)) {
-                                    new DashboardAdmin(user).start(dashboardStage);
-                                } else if ("Kasir".equals(roleName)) {
-                                    new DashboardKasirApp(user).start(dashboardStage);
-                                } else {
-                                    // Optional: Handle role lain atau default
-                                    new Alert(Alert.AlertType.WARNING, 
-                                        "Peran tidak dikenali: " + roleName + ". Mengarahkan ke Dashboard Admin.").showAndWait();
-                                    new DashboardAdmin(user).start(dashboardStage);
-                                }
-
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                                new Alert(Alert.AlertType.ERROR, "Gagal membuka dashboard: " + ex.getMessage()).show();
-                            }
-                        });
-                        fade.play();
-                    } else {
+                    if (user == null) {
                         showError("❌ Username atau password salah!");
                         txtPassword.clear();
                         shakeAnimation(btnLogin);
+                        return;
                     }
+
+                    // 🔑 VALIDASI JAM OPERASIONAL KHUSUS KASIR
+                    if ("Kasir".equalsIgnoreCase(user.getNamaRole())) {
+                        JamOperasionalDAO joDAO = new JamOperasionalDAO();
+                        String operasionalMessage = joDAO.checkJamOperasionalOfflineMessage();
+
+                        if (operasionalMessage != null) {
+                            Alert alert = new Alert(Alert.AlertType.WARNING);
+                            alert.setTitle("Login Ditolak");
+                            alert.setHeaderText("Toko Sedang Tidak Beroperasi");
+                            alert.setContentText(operasionalMessage);
+                            alert.showAndWait();
+                            return;
+                        }
+                    }
+
+                    // ✅ LOGIN BERHASIL
+                    FadeTransition fade = new FadeTransition(Duration.millis(300), loginStage.getScene().getRoot());
+                    fade.setFromValue(1.0);
+                    fade.setToValue(0.0);
+                    fade.setOnFinished(e -> {
+                        loginStage.close();
+                        try {
+                            Stage dashboardStage = new Stage();
+                            if ("Admin".equalsIgnoreCase(user.getNamaRole())) {
+                                new DashboardAdmin(user).start(dashboardStage);
+                            } else {
+                                new DashboardKasirApp(user).start(dashboardStage);
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                            new Alert(Alert.AlertType.ERROR, "Gagal membuka dashboard").show();
+                        }
+                    });
+                    fade.play();
                 });
-            } catch (InterruptedException ex) {
-                ex.printStackTrace();
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }).start();
     }
+
 
     private void showError(String msg) {
         lblError.setText(msg);
