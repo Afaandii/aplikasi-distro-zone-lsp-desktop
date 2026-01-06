@@ -98,9 +98,11 @@ public class DashboardKasir {
     private BooleanProperty transaksiAktifProperty = new SimpleBooleanProperty(false);
     private ItemKeranjang lastRemovedItem = null;
     private Timer undoTimer = null;
+    private User currentUser;
 
     public DashboardKasir(Stage stage, User user) {
         this.primaryStage = stage;
+        this.currentUser = user;
         this.currencyFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
         if (user != null) {
             this.namaKasir = user.getNama();
@@ -1016,17 +1018,34 @@ public class DashboardKasir {
     }
 
     private void bukaHalamanLaporan() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Laporan Kasir");
-        alert.setHeaderText("Laporan Transaksi - " + namaKasir);
-        alert.setContentText("Fitur laporan kasir akan dibuka di scene terpisah.\n" +
-                "Menampilkan:\n" +
-                "- Filter tanggal\n" +
-                "- Total transaksi\n" +
-                "- Total penjualan\n" +
-                "- Estimasi laba\n" +
-                "- Riwayat transaksi kasir");
-        alert.showAndWait();
+         if (currentUser == null) {
+            // Jika tidak ada user, tampilkan error
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("User tidak ditemukan");
+            alert.setContentText("Tidak dapat membuka laporan karena tidak ada sesi login.");
+            alert.showAndWait();
+            return;
+        }
+        // Buat instance dari LaporanKasirPanel
+         LaporanKasirPanel laporanPanel = new LaporanKasirPanel(currentUser);
+
+        // Buat stage baru untuk laporan
+        Stage laporanStage = new Stage();
+        laporanStage.setTitle("DistroZone - Laporan Kasir");
+        laporanStage.setMaximized(true); // Agar fullscreen seperti dashboard
+
+        // Buat scene baru dengan laporanPanel sebagai root
+        Scene laporanScene = new Scene(laporanPanel, primaryStage.getWidth(), primaryStage.getHeight());
+
+        // Set scene ke stage
+        laporanStage.setScene(laporanScene);
+
+        // Tampilkan stage
+        laporanStage.show();
+
+        // Optional: Jika ingin menutup dashboard saat laporan dibuka (tidak wajib)
+        // primaryStage.hide(); // Uncomment jika ingin sembunyikan dashboard
     }
 
     private void logout() {
