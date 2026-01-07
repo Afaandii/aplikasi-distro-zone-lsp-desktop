@@ -74,7 +74,7 @@ public class DashboardAdmin extends Application {
         cardContainer.addCard("foto_produk", new FotoProdukManagementPanel());
         cardContainer.addCard("varian", new VarianManagementPanel());
         cardContainer.addCard("jam_operasional", new JamOperasionalManagementPanel());
-//        cardContainer.addCard("laporan", new LaporanManagementPanel(currentUser));
+        cardContainer.addCard("laporan", new LaporanAdminPanel());
 
         // Tampilkan dashboard pertama kali
         cardContainer.showCard("dashboard");
@@ -136,184 +136,187 @@ public class DashboardAdmin extends Application {
     }
 
     private VBox createSidebar(Stage primaryStage) {
-    // Sidebar utama
-    VBox sidebar = new VBox(8);
-    sidebar.setPrefWidth(280);
-    sidebar.setStyle(
-        "-fx-background-color: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);"
+        // Sidebar utama
+        VBox sidebar = new VBox(8);
+        sidebar.setPrefWidth(280);
+        sidebar.setStyle(
+            "-fx-background-color: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);"
+        );
+        sidebar.setPadding(new Insets(0));
+        sidebar.setEffect(new javafx.scene.effect.DropShadow(15, Color.rgb(0, 0, 0, 0.3)));
+
+        // Header
+        VBox header = new VBox(8);
+        header.setAlignment(Pos.CENTER);
+        header.setPadding(new Insets(25, 20, 20, 20));
+        header.setStyle("-fx-background-color: rgba(52, 73, 94, 0.8);");
+
+        HBox logoContainer = new HBox(12);
+        logoContainer.setAlignment(Pos.CENTER);
+
+        Label logo = new Label("DistroZone");
+        logo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
+        logo.setTextFill(Color.WHITE);
+
+        logoContainer.getChildren().add(logo);
+        header.getChildren().add(logoContainer);
+
+        // User Card
+     // User Card — DIPERBAIKI: Avatar + Nama di sebelah kanan
+    VBox userCard = new VBox(10);
+    userCard.setAlignment(Pos.CENTER);
+    userCard.setPadding(new Insets(15));
+    userCard.setStyle(
+        "-fx-background-color: rgba(52, 152, 219, 0.15); " +
+        "-fx-background-radius: 12; " +
+        "-fx-border-color: rgba(52, 152, 219, 0.3); " +
+        "-fx-border-width: 1; " +
+        "-fx-border-radius: 12;"
     );
-    sidebar.setPadding(new Insets(0));
-    sidebar.setEffect(new javafx.scene.effect.DropShadow(15, Color.rgb(0, 0, 0, 0.3)));
+    userCard.setMaxWidth(240);
+    VBox.setMargin(userCard, new Insets(15, 20, 15, 20));
 
-    // Header
-    VBox header = new VBox(8);
-    header.setAlignment(Pos.CENTER);
-    header.setPadding(new Insets(25, 20, 20, 20));
-    header.setStyle("-fx-background-color: rgba(52, 73, 94, 0.8);");
+    // Gunakan HBox untuk avatar + teks sejajar horizontal
+    HBox userInfo = new HBox(12);
+    userInfo.setAlignment(Pos.CENTER_LEFT);
+    userInfo.setPadding(new Insets(0)); // Padding sudah diatur di userCard
 
-    HBox logoContainer = new HBox(12);
-    logoContainer.setAlignment(Pos.CENTER);
+    StackPane avatar = new StackPane();
+    Circle avatarCircle = new Circle(28);
+    avatarCircle.setFill(Color.web("#3498db"));
+    avatarCircle.setStroke(Color.WHITE);
+    avatarCircle.setStrokeWidth(2.5);
 
-    Label logo = new Label("DistroZone");
-    logo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-    logo.setTextFill(Color.WHITE);
+    Label userIcon = new Label("👤");
+    userIcon.setFont(Font.font(26));
 
-    logoContainer.getChildren().add(logo);
-    header.getChildren().add(logoContainer);
+    avatar.getChildren().addAll(avatarCircle, userIcon);
 
-    // User Card
- // User Card — DIPERBAIKI: Avatar + Nama di sebelah kanan
-VBox userCard = new VBox(10);
-userCard.setAlignment(Pos.CENTER);
-userCard.setPadding(new Insets(15));
-userCard.setStyle(
-    "-fx-background-color: rgba(52, 152, 219, 0.15); " +
-    "-fx-background-radius: 12; " +
-    "-fx-border-color: rgba(52, 152, 219, 0.3); " +
-    "-fx-border-width: 1; " +
-    "-fx-border-radius: 12;"
-);
-userCard.setMaxWidth(240);
-VBox.setMargin(userCard, new Insets(15, 20, 15, 20));
+    Label userName = new Label(currentUser.getNama());
+    userName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+    userName.setTextFill(Color.WHITE);
 
-// Gunakan HBox untuk avatar + teks sejajar horizontal
-HBox userInfo = new HBox(12);
-userInfo.setAlignment(Pos.CENTER_LEFT);
-userInfo.setPadding(new Insets(0)); // Padding sudah diatur di userCard
+    userInfo.getChildren().addAll(avatar, userName);
 
-StackPane avatar = new StackPane();
-Circle avatarCircle = new Circle(28);
-avatarCircle.setFill(Color.web("#3498db"));
-avatarCircle.setStroke(Color.WHITE);
-avatarCircle.setStrokeWidth(2.5);
+    // Masukkan HBox ke dalam VBox (untuk menjaga struktur userCard)
+    userCard.getChildren().add(userInfo);
 
-Label userIcon = new Label("👤");
-userIcon.setFont(Font.font(26));
+        // Menu Items — DIBUNGKUS SCROLLPANE
+        ScrollPane menuScroll = new ScrollPane();
+        menuScroll.setFitToWidth(true);
+        menuScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        menuScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        menuScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS); // ⬅️ Wajib!
+        menuScroll.setPrefHeight(350); // ⬅️ Atur tinggi agar scroll muncul
+        menuScroll.setMinHeight(300);
+        menuScroll.setMaxHeight(Double.MAX_VALUE);
+        menuScroll.getStyleClass().add("sidebar-scroll");
 
-avatar.getChildren().addAll(avatarCircle, userIcon);
+        // Isi menu items — KELOMPOK BERDASARKAN JUDUL
+        VBox menuContainer = new VBox(4);
+        menuContainer.setPadding(new Insets(15, 15, 15, 15));
 
-Label userName = new Label(currentUser.getNama());
-userName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
-userName.setTextFill(Color.WHITE);
+        // --- DASHBOARD (di luar Master) ---
+        menuContainer.getChildren().add(createSectionHeader("Dashboard", "🏠"));
+        menuContainer.getChildren().add(
+            createMenuItem("Dashboard", "dashboard", true)
+        );
 
-userInfo.getChildren().addAll(avatar, userName);
+        // --- MASTER ---
+        menuContainer.getChildren().add(createSectionHeader("Master", "📚"));
+        menuContainer.getChildren().addAll(
+            createMenuItem("Merk", "merk", false),
+            createMenuItem("Tipe", "tipe", false),
+            createMenuItem("Ukuran", "ukuran", false),
+            createMenuItem("Warna", "warna", false),
+            createMenuItem("Produk", "produk", false),
+            createMenuItem("Foto Produk", "foto_produk", false),
+            createMenuItem("Varian Produk", "varian", false),
+            createMenuItem("Jam Operasional", "jam_operasional", false)
+        );
 
-// Masukkan HBox ke dalam VBox (untuk menjaga struktur userCard)
-userCard.getChildren().add(userInfo);
+        // --- SETTING ---
+        menuContainer.getChildren().add(createSectionHeader("Setting", "⚙️"));
+        menuContainer.getChildren().add(
+            createMenuItem("Karyawan", "karyawan", false)
+        );
 
-    // Menu Items — DIBUNGKUS SCROLLPANE
-    ScrollPane menuScroll = new ScrollPane();
-    menuScroll.setFitToWidth(true);
-    menuScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
-    menuScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        // --- LAPORAN ---
+        menuContainer.getChildren().add(createSectionHeader("Laporan", "📊"));
+        menuContainer.getChildren().add(
+            createMenuItem("Laporan", "laporan", false)
+        );
 
-    menuScroll.getStyleClass().add("sidebar-scroll");
+        menuScroll.setContent(menuContainer);
 
-    // Isi menu items — KELOMPOK BERDASARKAN JUDUL
-    VBox menuContainer = new VBox(4);
-    menuContainer.setPadding(new Insets(15, 15, 15, 15));
+        // Tombol Logout
+        Button btnLogout = new Button("🚪  Keluar");
+        btnLogout.setStyle(
+            "-fx-background-color: #e74c3c; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 13 0; " +
+            "-fx-background-radius: 10; " +
+            "-fx-cursor: hand;"
+        );
+        btnLogout.setMaxWidth(Double.MAX_VALUE);
 
-    // --- DASHBOARD (di luar Master) ---
-    menuContainer.getChildren().add(createSectionHeader("Dashboard", "🏠"));
-    menuContainer.getChildren().add(
-        createMenuItem("Dashboard", "dashboard", true)
-    );
+        btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(
+            "-fx-background-color: #c0392b; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 13 0; " +
+            "-fx-background-radius: 10; " +
+            "-fx-cursor: hand; " +
+            "-fx-scale-x: 1.02; -fx-scale-y: 1.02;"
+        ));
 
-    // --- MASTER ---
-    menuContainer.getChildren().add(createSectionHeader("Master", "📚"));
-    menuContainer.getChildren().addAll(
-        createMenuItem("Merk", "merk", false),
-        createMenuItem("Tipe", "tipe", false),
-        createMenuItem("Ukuran", "ukuran", false),
-        createMenuItem("Warna", "warna", false),
-        createMenuItem("Produk", "produk", false),
-        createMenuItem("Foto Produk", "foto_produk", false),
-        createMenuItem("Varian Produk", "varian", false),
-        createMenuItem("Jam Operasional", "jam_operasional", false)
-    );
+        btnLogout.setOnMouseExited(e -> btnLogout.setStyle(
+            "-fx-background-color: #e74c3c; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 14px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-padding: 13 0; " +
+            "-fx-background-radius: 10; " +
+            "-fx-cursor: hand;"
+        ));
 
-    // --- SETTING ---
-    menuContainer.getChildren().add(createSectionHeader("Setting", "⚙️"));
-    menuContainer.getChildren().add(
-        createMenuItem("Karyawan", "karyawan", false)
-    );
+        btnLogout.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Konfirmasi Logout");
+            alert.setHeaderText(null);
+            alert.setContentText("Apakah Anda yakin ingin keluar?");
 
-    // --- LAPORAN ---
-    menuContainer.getChildren().add(createSectionHeader("Laporan", "📊"));
-    menuContainer.getChildren().add(
-        createMenuItem("Laporan", "laporan", false)
-    );
+            if (alert.showAndWait().get() == ButtonType.OK) {
+                // Tutup stage dashboard
+                primaryStage.close();
 
-    menuScroll.setContent(menuContainer);
+                // Buka kembali halaman login
+                try {
+                    // Buat instance LoginPage
+                    LoginPage loginPage = new LoginPage();
 
-    // Tombol Logout
-    Button btnLogout = new Button("🚪  Keluar");
-    btnLogout.setStyle(
-        "-fx-background-color: #e74c3c; " +
-        "-fx-text-fill: white; " +
-        "-fx-font-size: 14px; " +
-        "-fx-font-weight: bold; " +
-        "-fx-padding: 13 0; " +
-        "-fx-background-radius: 10; " +
-        "-fx-cursor: hand;"
-    );
-    btnLogout.setMaxWidth(Double.MAX_VALUE);
+                    // Buat stage baru untuk login
+                    Stage loginStage = new Stage();
+                    loginPage.start(loginStage); // Panggil start() dari LoginPage
 
-    btnLogout.setOnMouseEntered(e -> btnLogout.setStyle(
-        "-fx-background-color: #c0392b; " +
-        "-fx-text-fill: white; " +
-        "-fx-font-size: 14px; " +
-        "-fx-font-weight: bold; " +
-        "-fx-padding: 13 0; " +
-        "-fx-background-radius: 10; " +
-        "-fx-cursor: hand; " +
-        "-fx-scale-x: 1.02; -fx-scale-y: 1.02;"
-    ));
-
-    btnLogout.setOnMouseExited(e -> btnLogout.setStyle(
-        "-fx-background-color: #e74c3c; " +
-        "-fx-text-fill: white; " +
-        "-fx-font-size: 14px; " +
-        "-fx-font-weight: bold; " +
-        "-fx-padding: 13 0; " +
-        "-fx-background-radius: 10; " +
-        "-fx-cursor: hand;"
-    ));
-
-    btnLogout.setOnAction(e -> {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Konfirmasi Logout");
-        alert.setHeaderText(null);
-        alert.setContentText("Apakah Anda yakin ingin keluar?");
-
-        if (alert.showAndWait().get() == ButtonType.OK) {
-            // Tutup stage dashboard
-            primaryStage.close();
-
-            // Buka kembali halaman login
-            try {
-                // Buat instance LoginPage
-                LoginPage loginPage = new LoginPage();
-
-                // Buat stage baru untuk login
-                Stage loginStage = new Stage();
-                loginPage.start(loginStage); // Panggil start() dari LoginPage
-
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                System.err.println("Gagal membuka halaman login.");
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    System.err.println("Gagal membuka halaman login.");
+                }
             }
-        }
-    });
+        });
 
-    VBox logoutContainer = new VBox(btnLogout);
-    logoutContainer.setPadding(new Insets(15, 20, 20, 20));
+        VBox logoutContainer = new VBox(btnLogout);
+        logoutContainer.setPadding(new Insets(15, 20, 20, 20));
 
-    // Gabungkan semua ke sidebar
-    sidebar.getChildren().addAll(header, userCard, menuScroll, logoutContainer);
+        // Gabungkan semua ke sidebar
+        sidebar.getChildren().addAll(header, userCard, menuScroll, logoutContainer);
 
-    return sidebar;
-}
+        return sidebar;
+    }
 
 // MODIFIKASI: createSectionHeader dengan ikon, tanpa background
 private HBox createSectionHeader(String title, String icon) {
