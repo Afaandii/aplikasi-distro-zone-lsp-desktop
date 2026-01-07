@@ -845,7 +845,7 @@ public class DashboardKasir {
 
                     // Buat objek Transaksi
                     Transaksi transaksi = new Transaksi();
-                    transaksi.setIdCustomer(idKasir); // Untuk offline, customer = kasir
+                    transaksi.setIdCustomer(null); // Untuk offline, customer = kasir
                     transaksi.setIdKasir(idKasir);
                     transaksi.setKodeTransaksi(generateNoTransaksi());
                     transaksi.setTotal((long) totalBayarProperty.get());

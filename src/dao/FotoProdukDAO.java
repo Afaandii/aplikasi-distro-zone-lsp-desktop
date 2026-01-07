@@ -138,8 +138,27 @@ public class FotoProdukDAO {
     }
     
     // Update foto produk
-    // Ubah parameter: tambahkan File photoFile
     public boolean updateFotoProduk(FotoProduk foto, File photoFile) {
+        // 1. Simpan URL lama SEBELUM di-overwrite
+        String oldUrl = foto.getUrlFoto();
+        
+        // Variabel untuk URL yang akan disimpan (default tetap yang lama)
+        String finalUrl = oldUrl;
+        boolean isNewFileUploaded = false;
+
+        // 2. Jika ada file baru, upload dulu di awal
+        if (photoFile != null) {
+            String uploadedUrl = uploadFotoProduk(photoFile, foto.getIdProduk());
+            if (uploadedUrl != null) {
+                finalUrl = uploadedUrl;
+                isNewFileUploaded = true;
+            } else {
+                System.err.println("❌ Upload file gagal, pembatalan update database.");
+                return false; // Batalkan update jika upload gagal
+            }
+        }
+        
+        // 3. Update Database
         String sql = "UPDATE foto_produk SET id_produk = ?, id_warna = ?, url_foto = ?, updated_at = NOW() " +
                      "WHERE id_foto_produk = ?";
 
@@ -149,54 +168,50 @@ public class FotoProdukDAO {
             stmt.setLong(1, foto.getIdProduk());
             stmt.setLong(2, foto.getIdWarna());
 
-            // Handle foto
-            String urlFoto = foto.getUrlFoto(); // default: jangan ubah jika tidak upload
-            if (photoFile != null) {
-                String newUrl = uploadFotoProduk(photoFile, foto.getIdProduk());
-                if (newUrl != null) {
-                    urlFoto = newUrl;
-                }
-            }
-            stmt.setString(3, urlFoto);
+            // GUNAKAN finalUrl yang sudah kita persiapkan di atas (JANGAN upload ulang di sini)
+            stmt.setString(3, finalUrl);
 
             stmt.setLong(4, foto.getIdFotoProduk());
+            
+            int rowsUpdated = stmt.executeUpdate();
+            
+            // 4. Jika sukses update DB DAN ada file baru, baru hapus file lama di Supabase
+            if (rowsUpdated > 0 && isNewFileUploaded) {
+                deleteFileFromStorage(oldUrl);
+            }
 
-            return stmt.executeUpdate() > 0;
+            return rowsUpdated > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
     
+    
     // Delete foto produk
     public boolean deleteFotoProduk(Long idFotoProduk) {
-    // 1. Ambil data foto untuk dapatkan url_foto
+        // 1. Ambil data foto dulu untuk dapatkan URL
         FotoProduk foto = getFotoById(idFotoProduk);
         if (foto == null) {
             return false;
         }
-
-        // 2. Hapus file di Supabase (jika ada)
+        
         String urlFoto = foto.getUrlFoto();
-        if (urlFoto != null && !urlFoto.trim().isEmpty()) {
-            try {
-                // Ekstrak path dari URL
-                String filePath = SupabaseStorageConfig.extractFilePath(urlFoto);
-                if (filePath != null) {
-                    SupabaseStorageConfig.deleteFotoProduk(filePath);
-                }
-            } catch (Exception e) {
-                System.err.println("Gagal menghapus file dari Supabase: " + e.getMessage());
-            }
-        }
 
-        // 3. Hapus dari database
+        // 2. Hapus dari Database
         String sql = "DELETE FROM foto_produk WHERE id_foto_produk = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, idFotoProduk);
-            return stmt.executeUpdate() > 0;
+            int rowsDeleted = stmt.executeUpdate();
+            
+            // 3. Jika sukses hapus DB, baru hapus file di Supabase
+            if (rowsDeleted > 0) {
+                deleteFileFromStorage(urlFoto);
+            }
+            
+            return rowsDeleted > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -271,4 +286,49 @@ public class FotoProdukDAO {
        }
        return null;
    }
+   
+   // Hapus semua foto berdasarkan id_produk
+    public boolean deleteAllFotoByProduk(Long idProduk) {
+        // Ambil dulu semua foto untuk hapus file di Supabase
+        List<FotoProduk> fotoList = getFotoByProduk(idProduk);
+        for (FotoProduk foto : fotoList) {
+            deleteFotoProduk(foto.getIdFotoProduk()); // ini sudah hapus file + DB
+        }
+        return true;
+    }
+    
+    public boolean createFotoProdukWithUrl(FotoProduk foto) {
+        String sql = "INSERT INTO foto_produk (id_produk, id_warna, url_foto, created_at) " +
+                     "VALUES (?, ?, ?, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, foto.getIdProduk());
+            stmt.setLong(2, foto.getIdWarna());
+            stmt.setString(3, foto.getUrlFoto());
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+        // Helper method untuk menghapus file dari Supabase
+    private void deleteFileFromStorage(String urlFoto) {
+        if (urlFoto == null || urlFoto.trim().isEmpty()) return;
+
+        try {
+            // Ekstrak path dari URL public
+            String filePath = SupabaseStorageConfig.extractFilePath(urlFoto);
+            
+            if (filePath != null) {
+                // Panggil method delete di SupabaseConfig
+                boolean deleted = SupabaseStorageConfig.deleteFotoProduk(filePath);
+                if (deleted) {
+                    System.out.println("✅ File lama dihapus dari Supabase: " + filePath);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Gagal menghapus file lama di Supabase: " + e.getMessage());
+        }
+    }
 }

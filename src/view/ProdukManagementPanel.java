@@ -4,335 +4,1046 @@ import dao.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.stage.Modality;
-import javafx.stage.Stage;
+import javafx.stage.FileChooser;
 import model.*;
+
+import java.io.File;
+import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
-import javafx.scene.Scene;
+import java.util.Optional;
 
 public class ProdukManagementPanel extends VBox {
     private User currentUser;
+    
+    // DAOs
     private ProdukDAO produkDAO;
     private MerkDAO merkDAO;
     private TipeDAO tipeDAO;
-    private TableView<Produk> tableView;
+    private VarianDAO varianDAO;
+    private FotoProdukDAO fotoProdukDAO;
+    private UkuranDAO ukuranDAO;
+    private WarnaDAO warnaDAO;
+    
+    // Left Panel Components
+    private TableView<Produk> tableProduk;
     private ObservableList<Produk> produkList;
     private TextField txtSearch;
+    
+    // Right Panel Components - Tab 1: Info Produk
+    private TextField txtNamaKaos;
+    private ComboBox<Merk> cbMerk;
+    private ComboBox<Tipe> cbTipe;
+    private TextField txtHargaJual;
+    private TextField txtHargaPokok;
+    private TextField txtBerat;
+    private TextArea txtDeskripsi;
+    private TextArea txtSpesifikasi;
+    private Button btnSaveProduk, btnDeleteProduk, btnNewProduk;
+    
+    // Right Panel Components - Tab 2: Varian
+    private TableView<Varian> tableVarian;
+    private ObservableList<Varian> varianList;
+    private ComboBox<Ukuran> cbUkuran;
+    private ComboBox<Warna> cbWarnaVarian;
+    private TextField txtStok;
+    private Button btnAddVarian, btnUpdateVarian, btnDeleteVarian;
+    
+    // Right Panel Components - Tab 3: Foto Produk
+    private FlowPane fotoProdukContainer;
+    private ComboBox<Warna> cbWarnaFoto;
+    private Button btnUploadFoto;
+    
+    // Current State
+    private Produk selectedProduk;
+    private Varian selectedVarian;
+    
+    // Formatters
     private NumberFormat currencyFormat;
     private SimpleDateFormat dateFormat;
-
+    
     public ProdukManagementPanel(User user) {
         this.currentUser = user;
+        initializeDAOs();
+        initializeFormatters();
+        initializeUI();
+        loadProdukList("");
+    }
+    
+    private void initializeDAOs() {
         this.produkDAO = new ProdukDAO();
         this.merkDAO = new MerkDAO();
         this.tipeDAO = new TipeDAO();
+        this.varianDAO = new VarianDAO();
+        this.fotoProdukDAO = new FotoProdukDAO();
+        this.ukuranDAO = new UkuranDAO();
+        this.warnaDAO = new WarnaDAO();
+    }
+    
+    private void initializeFormatters() {
         this.currencyFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
         this.dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm");
-        initializeUI();
-        loadData("");
     }
-
+    
     private void initializeUI() {
         setPadding(new Insets(0));
-        setSpacing(25);
-        setStyle("-fx-background-color: transparent;");
-
-        // Header Section
-        VBox headerSection = createHeaderSection();
+        setSpacing(0);
+        setStyle("-fx-background-color: #f5f7fa;");
         
-        // Search and Action Bar
-        HBox actionBar = createActionBar();
+        // Header
+        VBox header = createHeader();
         
-        // Table Container
-        VBox tableContainer = createTableContainer();
-
-        getChildren().addAll(headerSection, actionBar, tableContainer);
+        // Split Pane
+        SplitPane splitPane = createSplitPane();
+        VBox.setVgrow(splitPane, Priority.ALWAYS);
+        
+        getChildren().addAll(header, splitPane);
     }
-
-    private VBox createHeaderSection() {
-        VBox headerBox = new VBox(8);
+    
+    private VBox createHeader() {
+        VBox headerBox = new VBox(5);
+        headerBox.setPadding(new Insets(25, 30, 20, 30));
+        headerBox.setStyle("-fx-background-color: white; -fx-border-color: #e1e8ed; -fx-border-width: 0 0 1 0;");
         
         Label title = new Label("Manajemen Produk");
         title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
         title.setTextFill(Color.web("#2c3e50"));
         
-        Label subtitle = new Label("Kelola data produk dan stok Anda");
-        subtitle.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
+        Label subtitle = new Label("Kelola data produk, varian, dan foto dalam satu panel");
+        subtitle.setFont(Font.font("Segoe UI", 14));
         subtitle.setTextFill(Color.web("#7f8c8d"));
         
         headerBox.getChildren().addAll(title, subtitle);
         return headerBox;
     }
-
-    private HBox createActionBar() {
-        HBox actionBar = new HBox(15);
-        actionBar.setAlignment(Pos.CENTER_LEFT);
-        actionBar.setPadding(new Insets(20));
-        actionBar.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 12; " +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 3);"
-        );
-
-        // Search Box
-        HBox searchBox = createSearchBox();
+    
+    private SplitPane createSplitPane() {
+        SplitPane splitPane = new SplitPane();
+        splitPane.setOrientation(Orientation.HORIZONTAL);
+        splitPane.setDividerPositions(0.4);
+        splitPane.setStyle("-fx-background-color: transparent;");
         
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        // Action Buttons
-        HBox buttonBox = createActionButtons();
-
-        actionBar.getChildren().addAll(searchBox, spacer, buttonBox);
-        return actionBar;
+        // Left Panel: List Produk
+        VBox leftPanel = createLeftPanel();
+        
+        // Right Panel: Detail Produk (Tabs)
+        VBox rightPanel = createRightPanel();
+        
+        splitPane.getItems().addAll(leftPanel, rightPanel);
+        return splitPane;
     }
-
-    private HBox createSearchBox() {
-        HBox searchBox = new HBox(12);
-        searchBox.setAlignment(Pos.CENTER_LEFT);
-        searchBox.setPadding(new Insets(10, 15, 10, 15));
-        searchBox.setStyle(
+    
+    // ==================== LEFT PANEL ====================
+    
+    private VBox createLeftPanel() {
+        VBox leftPanel = new VBox(15);
+        leftPanel.setPadding(new Insets(20));
+        leftPanel.setStyle("-fx-background-color: white;");
+        
+        // Search Bar
+        HBox searchBar = createSearchBar();
+        
+        // Table
+        tableProduk = createProdukTable();
+        VBox.setVgrow(tableProduk, Priority.ALWAYS);
+        
+        leftPanel.getChildren().addAll(searchBar, tableProduk);
+        return leftPanel;
+    }
+    
+    private HBox createSearchBar() {
+        HBox searchBar = new HBox(10);
+        searchBar.setAlignment(Pos.CENTER_LEFT);
+        searchBar.setPadding(new Insets(12, 15, 12, 15));
+        searchBar.setStyle(
             "-fx-background-color: #f8f9fa; " +
             "-fx-background-radius: 10; " +
             "-fx-border-color: #e1e8ed; " +
             "-fx-border-width: 1; " +
             "-fx-border-radius: 10;"
         );
-        searchBox.setPrefWidth(350);
-
-        Label searchIcon = new Label("🔍");
-        searchIcon.setFont(Font.font(18));
-
+        
+        Label icon = new Label("🔍");
+        icon.setFont(Font.font(16));
+        
         txtSearch = new TextField();
         txtSearch.setPromptText("Cari produk...");
-        txtSearch.setFont(Font.font("Segoe UI", 13));
-        txtSearch.setStyle(
-            "-fx-background-color: transparent; " +
-            "-fx-border-color: transparent; " +
-            "-fx-prompt-text-fill: #95a5a6;"
-        );
+        txtSearch.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
         HBox.setHgrow(txtSearch, Priority.ALWAYS);
-        txtSearch.textProperty().addListener((obs, old, newVal) -> loadData(newVal));
-
-        // Focus effect
-        searchBox.focusedProperty().addListener((obs, oldVal, newVal) -> {
-            if (txtSearch.isFocused()) {
-                searchBox.setStyle(
-                    "-fx-background-color: white; " +
-                    "-fx-background-radius: 10; " +
-                    "-fx-border-color: #3498db; " +
-                    "-fx-border-width: 2; " +
-                    "-fx-border-radius: 10;"
-                );
-            } else {
-                searchBox.setStyle(
-                    "-fx-background-color: #f8f9fa; " +
-                    "-fx-background-radius: 10; " +
-                    "-fx-border-color: #e1e8ed; " +
-                    "-fx-border-width: 1; " +
-                    "-fx-border-radius: 10;"
-                );
-            }
-        });
-
-        searchBox.getChildren().addAll(searchIcon, txtSearch);
-        return searchBox;
-    }
-
-    private HBox createActionButtons() {
-        HBox buttonBox = new HBox(10);
-        buttonBox.setAlignment(Pos.CENTER_RIGHT);
-
-        Button btnAdd = createModernButton("➕ Tambah", "#2ecc71", "#27ae60");
-        btnAdd.setOnAction(e -> showAddDialog());
-
-        Button btnEdit = createModernButton("✏ Edit", "#3498db", "#2980b9");
-        btnEdit.setOnAction(e -> showEditDialog());
-
-        Button btnDelete = createModernButton("🗑 Hapus", "#e74c3c", "#c0392b");
-        btnDelete.setOnAction(e -> deleteProduk());
         
-        Button btnRefresh = createModernButton("🔄 Refresh", "#95a5a6", "#7f8c8d");
-        btnRefresh.setOnAction(e -> loadData(""));
-
-        buttonBox.getChildren().addAll(btnAdd, btnEdit, btnDelete, btnRefresh);
-        return buttonBox;
+        txtSearch.textProperty().addListener((obs, old, newVal) -> loadProdukList(newVal));
+        
+        searchBar.getChildren().addAll(icon, txtSearch);
+        return searchBar;
     }
-
-    private Button createModernButton(String text, String normalColor, String hoverColor) {
-        Button btn = new Button(text);
-        btn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
-        btn.setTextFill(Color.WHITE);
-        btn.setPadding(new Insets(10, 20, 10, 20));
-        btn.setStyle(
-            "-fx-background-color: " + normalColor + "; " +
-            "-fx-background-radius: 8; " +
-            "-fx-cursor: hand;"
-        );
-
-        btn.setOnMouseEntered(e -> {
-            btn.setStyle(
-                "-fx-background-color: " + hoverColor + "; " +
-                "-fx-background-radius: 8; " +
-                "-fx-cursor: hand; " +
-                "-fx-scale-x: 1.02; " +
-                "-fx-scale-y: 1.02;"
-            );
-        });
-
-        btn.setOnMouseExited(e -> {
-            btn.setStyle(
-                "-fx-background-color: " + normalColor + "; " +
-                "-fx-background-radius: 8; " +
-                "-fx-cursor: hand;"
-            );
-        });
-
-        return btn;
-    }
-
-    private VBox createTableContainer() {
-        VBox container = new VBox();
-        container.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 12; " +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 12, 0, 0, 3);"
-        );
-
-        tableView = createTable();
-        VBox.setVgrow(tableView, Priority.ALWAYS);
-
-        container.getChildren().add(tableView);
-        return container;
-    }
-
-    private TableView<Produk> createTable() {
+    
+    private TableView<Produk> createProdukTable() {
         TableView<Produk> table = new TableView<>();
-        table.setPrefHeight(550);
-        table.setStyle(
-            "-fx-background-color: white; " +
-            "-fx-background-radius: 12; " +
-            "-fx-table-cell-border-color: transparent; " +
-            "-fx-padding: 15;"
-        );
-
-        // Kolom tetap seperti sebelumnya
-        TableColumn<Produk, Long> colId = new TableColumn<>("ID");
-        colId.setCellValueFactory(cell -> 
-            new javafx.beans.property.SimpleObjectProperty<>(cell.getValue().getIdProduk())
-        );
-        colId.setVisible(false);
-
-        TableColumn<Produk, String> colNama = new TableColumn<>("Nama Kaos");
+        table.setStyle("-fx-background-color: white;");
+        
+        TableColumn<Produk, String> colNama = new TableColumn<>("Nama Produk");
         colNama.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaKaos())
         );
-        colNama.setPrefWidth(250);
-        styleColumn(colNama);
-
+        colNama.setPrefWidth(180);
+        
         TableColumn<Produk, String> colMerk = new TableColumn<>("Merk");
         colMerk.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaMerk())
         );
-        colMerk.setPrefWidth(150);
-        styleColumn(colMerk);
-
+        colMerk.setPrefWidth(100);
+        
         TableColumn<Produk, String> colTipe = new TableColumn<>("Tipe");
         colTipe.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaTipe())
         );
-        colTipe.setPrefWidth(150);
-        styleColumn(colTipe);
-
-        TableColumn<Produk, String> colHargaJual = new TableColumn<>("Harga Jual");
-        colHargaJual.setCellValueFactory(cell -> 
+        colTipe.setPrefWidth(100);
+        
+        TableColumn<Produk, String> colHarga = new TableColumn<>("Harga Jual");
+        colHarga.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(currencyFormat.format(cell.getValue().getHargaJual()))
         );
-        colHargaJual.setPrefWidth(130);
-        styleColumn(colHargaJual);
-
+        colHarga.setPrefWidth(120);
+        
         TableColumn<Produk, String> colHargaPokok = new TableColumn<>("Harga Pokok");
         colHargaPokok.setCellValueFactory(cell -> 
             new javafx.beans.property.SimpleStringProperty(currencyFormat.format(cell.getValue().getHargaPokok()))
         );
-        colHargaPokok.setPrefWidth(130);
-        styleColumn(colHargaPokok);
-
-        TableColumn<Produk, String> colDibuat = new TableColumn<>("Dibuat");
-        colDibuat.setCellValueFactory(cell -> 
-            new javafx.beans.property.SimpleStringProperty(dateFormat.format(cell.getValue().getCreatedAt()))
-        );
-        colDibuat.setPrefWidth(150);
-        styleColumn(colDibuat);
-
-        table.getColumns().addAll(colId, colNama, colMerk, colTipe, colHargaJual, colHargaPokok, colDibuat);
+        colHargaPokok.setPrefWidth(120);
+        
+        table.getColumns().addAll(colNama, colMerk, colTipe, colHarga, colHargaPokok);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        
+        // Selection Listener
+        table.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+            if (newVal != null) {
+                selectedProduk = newVal;
+                loadProdukDetail(newVal);
+            }
+        });
+        
         return table;
     }
-
-    private void styleColumn(TableColumn<Produk, String> column) {
-        column.setStyle("-fx-alignment: CENTER-LEFT; -fx-font-size: 13px;");
+    
+    // ==================== RIGHT PANEL ====================
+    
+    private VBox createRightPanel() {
+        VBox rightPanel = new VBox(0);
+        rightPanel.setStyle("-fx-background-color: white;");
+        
+        TabPane tabPane = new TabPane();
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        tabPane.setStyle("-fx-background-color: white;");
+        VBox.setVgrow(tabPane, Priority.ALWAYS);
+        
+        // Tab 1: Info Produk
+        Tab tabInfo = new Tab("Info Produk");
+        tabInfo.setContent(createInfoProdukTab());
+        
+        // Tab 2: Varian
+        Tab tabVarian = new Tab("Varian");
+        tabVarian.setContent(createVarianTab());
+        
+        // Tab 3: Foto Produk
+        Tab tabFoto = new Tab("Foto Produk");
+        tabFoto.setContent(createFotoProdukTab());
+        
+        tabPane.getTabs().addAll(tabInfo, tabVarian, tabFoto);
+        rightPanel.getChildren().add(tabPane);
+        
+        return rightPanel;
     }
-
-    private void loadData(String keyword) {
+    
+    // ==================== TAB 1: INFO PRODUK ====================
+    
+    private VBox createInfoProdukTab() {
+        VBox container = new VBox(50);
+        container.setPadding(new Insets(25));
+        container.setStyle("-fx-background-color: white;");
+        
+        // Form
+        GridPane form = new GridPane();
+        form.setHgap(15);
+        form.setVgap(15);
+        
+        int row = 0;
+        
+        // Nama Kaos
+        form.add(new Label("Nama Kaos:"), 0, row);
+        txtNamaKaos = new TextField();
+        txtNamaKaos.setPromptText("Contoh: Distro Zone Basic Tee");
+        styleTextField(txtNamaKaos);
+        form.add(txtNamaKaos, 1, row++);
+        
+        // Merk
+        form.add(new Label("Merk:"), 0, row);
+        cbMerk = new ComboBox<>();
+        cbMerk.setPromptText("Pilih Merk");
+        styleComboBox(cbMerk);
+        form.add(cbMerk, 1, row++);
+        
+        // Tipe
+        form.add(new Label("Tipe:"), 0, row);
+        cbTipe = new ComboBox<>();
+        cbTipe.setPromptText("Pilih Tipe");
+        styleComboBox(cbTipe);
+        form.add(cbTipe, 1, row++);
+        
+        // Harga Jual
+        form.add(new Label("Harga Jual:"), 0, row);
+        txtHargaJual = new TextField();
+        txtHargaJual.setPromptText("Contoh: 150000");
+        styleTextField(txtHargaJual);
+        form.add(txtHargaJual, 1, row++);
+        
+        // Harga Pokok
+        form.add(new Label("Harga Pokok:"), 0, row);
+        txtHargaPokok = new TextField();
+        txtHargaPokok.setPromptText("Contoh: 75000");
+        styleTextField(txtHargaPokok);
+        form.add(txtHargaPokok, 1, row++);
+        
+        // Berat
+        form.add(new Label("Berat (gram):"), 0, row);
+        txtBerat = new TextField();
+        txtBerat.setPromptText("Contoh: 250");
+        styleTextField(txtBerat);
+        form.add(txtBerat, 1, row++);
+        
+        // Deskripsi
+        form.add(new Label("Deskripsi:"), 0, row);
+        txtDeskripsi = new TextArea();
+        txtDeskripsi.setPrefRowCount(3);
+        txtDeskripsi.setPromptText("Deskripsi produk...");
+        styleTextArea(txtDeskripsi);
+        form.add(txtDeskripsi, 1, row++);
+        
+        // Spesifikasi
+        form.add(new Label("Spesifikasi:"), 0, row);
+        txtSpesifikasi = new TextArea();
+        txtSpesifikasi.setPrefRowCount(3);
+        txtSpesifikasi.setPromptText("Spesifikasi produk...");
+        styleTextArea(txtSpesifikasi);
+        form.add(txtSpesifikasi, 1, row++);
+        
+        // Buttons
+        HBox buttonBox = new HBox(10);
+        buttonBox.setAlignment(Pos.CENTER_LEFT);
+        
+        btnNewProduk = createStyledButton("➕ Produk Baru", "#2ecc71");
+        btnNewProduk.setOnAction(e -> clearProdukForm());
+        
+        btnSaveProduk = createStyledButton("💾 Simpan", "#3498db");
+        btnSaveProduk.setOnAction(e -> saveProduk());
+        
+        btnDeleteProduk = createStyledButton("🗑 Hapus", "#e74c3c");
+        btnDeleteProduk.setOnAction(e -> deleteProduk());
+        
+        buttonBox.getChildren().addAll(btnNewProduk, btnSaveProduk, btnDeleteProduk);
+        form.add(buttonBox, 1, row);
+        
+        // Load combo data
+        loadComboBoxData();
+        
+        ScrollPane scrollPane = new ScrollPane(form);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background-color: white; -fx-border-color: transparent;");
+        
+        container.getChildren().add(scrollPane);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        return container;
+    }
+    
+    // ==================== TAB 2: VARIAN ====================
+    
+    private VBox createVarianTab() {
+        VBox container = new VBox(20);
+        container.setPadding(new Insets(25));
+        
+        // Info Label
+        Label infoLabel = new Label("💡 Pilih produk di sebelah kiri untuk mengelola varian");
+        infoLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        
+        // Form Varian
+        GridPane form = new GridPane();
+        form.setHgap(15);
+        form.setVgap(15);
+        
+        int row = 0;
+        
+        form.add(new Label("Ukuran:"), 0, row);
+        cbUkuran = new ComboBox<>();
+        cbUkuran.setPromptText("Pilih Ukuran");
+        styleComboBox(cbUkuran);
+        form.add(cbUkuran, 1, row++);
+        
+        form.add(new Label("Warna:"), 0, row);
+        cbWarnaVarian = new ComboBox<>();
+        cbWarnaVarian.setPromptText("Pilih Warna");
+        styleComboBox(cbWarnaVarian);
+        form.add(cbWarnaVarian, 1, row++);
+        
+        form.add(new Label("Stok:"), 0, row);
+        txtStok = new TextField();
+        txtStok.setPromptText("Contoh: 50");
+        styleTextField(txtStok);
+        form.add(txtStok, 1, row++);
+        
+        // Buttons
+        HBox btnBox = new HBox(10);
+        btnBox.setAlignment(Pos.CENTER_LEFT);
+        
+        btnAddVarian = createStyledButton("➕ Tambah", "#2ecc71");
+        btnAddVarian.setOnAction(e -> addVarian());
+        
+        btnUpdateVarian = createStyledButton("✏ Update", "#3498db");
+        btnUpdateVarian.setOnAction(e -> updateVarian());
+        
+        btnDeleteVarian = createStyledButton("🗑 Hapus", "#e74c3c");
+        btnDeleteVarian.setOnAction(e -> deleteVarian());
+        
+        btnBox.getChildren().addAll(btnAddVarian, btnUpdateVarian, btnDeleteVarian);
+        form.add(btnBox, 1, row);
+        
+        // Table Varian
+        tableVarian = createVarianTable();
+        VBox.setVgrow(tableVarian, Priority.ALWAYS);
+        
+        // Load combo data
+        loadVarianComboData();
+        
+        container.getChildren().addAll(infoLabel, form, new Separator(), tableVarian);
+        return container;
+    }
+    
+    private TableView<Varian> createVarianTable() {
+        TableView<Varian> table = new TableView<>();
+        
+        TableColumn<Varian, String> colUkuran = new TableColumn<>("Ukuran");
+        colUkuran.setCellValueFactory(cell -> 
+            new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaUkuran())
+        );
+        
+        TableColumn<Varian, String> colWarna = new TableColumn<>("Warna");
+        colWarna.setCellValueFactory(cell -> 
+            new javafx.beans.property.SimpleStringProperty(cell.getValue().getNamaWarna())
+        );
+        
+        TableColumn<Varian, Long> colStok = new TableColumn<>("Stok");
+        colStok.setCellValueFactory(new PropertyValueFactory<>("stokKaos"));
+        
+        table.getColumns().addAll(colUkuran, colWarna, colStok);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        
+        table.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
+            if (newVal != null) {
+                selectedVarian = newVal;
+                loadVarianToForm(newVal);
+            }
+        });
+        
+        return table;
+    }
+    
+    // ==================== TAB 3: FOTO PRODUK ====================
+    
+    private VBox createFotoProdukTab() {
+        VBox container = new VBox(20);
+        container.setPadding(new Insets(25));
+        
+        // Info Label
+        Label infoLabel = new Label("💡 Pilih produk di sebelah kiri untuk mengelola foto");
+        infoLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        
+        // Upload Form
+        HBox uploadBox = new HBox(15);
+        uploadBox.setAlignment(Pos.CENTER_LEFT);
+        
+        cbWarnaFoto = new ComboBox<>();
+        cbWarnaFoto.setPromptText("Pilih Warna");
+        styleComboBox(cbWarnaFoto);
+        
+        btnUploadFoto = createStyledButton("📷 Upload Foto", "#3498db");
+        btnUploadFoto.setOnAction(e -> uploadFoto());
+        
+        uploadBox.getChildren().addAll(new Label("Warna:"), cbWarnaFoto, btnUploadFoto);
+        
+        // Foto Container
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background-color: white;");
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+        
+        fotoProdukContainer = new FlowPane();
+        fotoProdukContainer.setHgap(15);
+        fotoProdukContainer.setVgap(15);
+        fotoProdukContainer.setPadding(new Insets(15));
+        fotoProdukContainer.setStyle("-fx-background-color: #f8f9fa;");
+        
+        scrollPane.setContent(fotoProdukContainer);
+        
+        // Load warna
+        loadFotoComboData();
+        
+        container.getChildren().addAll(infoLabel, uploadBox, new Separator(), scrollPane);
+        return container;
+    }
+    
+    // ==================== DATA LOADING METHODS ====================
+    
+    private void loadProdukList(String keyword) {
         List<Produk> list = produkDAO.getAllProduk(keyword);
-        this.produkList = FXCollections.observableArrayList(list);
-        tableView.setItems(this.produkList);
+        produkList = FXCollections.observableArrayList(list);
+        tableProduk.setItems(produkList);
     }
-
-    private void showAddDialog() {
-        ProdukFormDialog dialog = new ProdukFormDialog(null);
-        boolean success = dialog.showAndWait(merkDAO.getAllMerk(), tipeDAO.getAllTipe());
-        if (success) {
-            loadData("");
+    
+    private void loadProdukDetail(Produk produk) {
+        // Tab 1: Load produk info
+        txtNamaKaos.setText(produk.getNamaKaos());
+        cbMerk.setValue(findMerkById(produk.getIdMerk()));
+        cbTipe.setValue(findTipeById(produk.getIdTipe()));
+        txtHargaJual.setText(produk.getHargaJual().toString());
+        txtHargaPokok.setText(produk.getHargaPokok().toString());
+        txtBerat.setText(produk.getBerat() != null ? produk.getBerat().toString() : "");
+        txtDeskripsi.setText(produk.getDeskripsi());
+        txtSpesifikasi.setText(produk.getSpesifikasi());
+        
+        // Tab 2: Load varian
+        loadVarianList(produk.getIdProduk());
+        
+        // Tab 3: Load foto
+        loadFotoProdukList(produk.getIdProduk());
+    }
+    
+    private void loadVarianList(Long idProduk) {
+        List<Varian> list = varianDAO.getVarianByProduk(idProduk);
+        varianList = FXCollections.observableArrayList(list);
+        tableVarian.setItems(varianList);
+    }
+    
+    private void loadFotoProdukList(Long idProduk) {
+        fotoProdukContainer.getChildren().clear();
+        List<FotoProduk> fotoList = fotoProdukDAO.getFotoByProduk(idProduk);
+        
+        for (FotoProduk foto : fotoList) {
+            VBox fotoCard = createFotoCard(foto);
+            fotoProdukContainer.getChildren().add(fotoCard);
         }
     }
-
-    private void showEditDialog() {
-        Produk selected = tableView.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            showAlert("Pilih produk yang akan diedit!", Alert.AlertType.WARNING);
-            return;
+    
+    private VBox createFotoCard(FotoProduk foto) {
+        VBox card = new VBox(10);
+        card.setAlignment(Pos.CENTER);
+        card.setPadding(new Insets(10));
+        card.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-border-color: #e1e8ed; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 8; " +
+            "-fx-background-radius: 8;"
+        );
+        card.setPrefSize(150, 180);
+        
+        // Image
+        ImageView imageView = new ImageView();
+        imageView.setFitWidth(120);
+        imageView.setFitHeight(120);
+        imageView.setPreserveRatio(true);
+        
+        try {
+            Image image = new Image(foto.getUrlFoto(), true);
+            imageView.setImage(image);
+        } catch (Exception e) {
+            imageView.setImage(null);
         }
-        ProdukFormDialog dialog = new ProdukFormDialog(selected);
-        boolean success = dialog.showAndWait(merkDAO.getAllMerk(), tipeDAO.getAllTipe());
-        if (success) {
-            loadData("");
+        
+        // Label
+        Label lblWarna = new Label(foto.getNamaWarna() != null ? foto.getNamaWarna() : "No Color");
+        lblWarna.setStyle("-fx-font-size: 12px; -fx-text-fill: #7f8c8d;");
+        
+        // --- BAGIAN TOMBOL (UPDATE INI) ---
+        HBox buttonBox = new HBox(5); // Jarak antar tombol
+        buttonBox.setAlignment(Pos.CENTER);
+        
+        // Tombol Ganti (Replace)
+        Button btnEdit = new Button("✏");
+        btnEdit.setStyle(
+            "-fx-background-color: #f39c12; " + // Warna Oranye
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 12px; " +
+            "-fx-cursor: hand;"
+        );
+        btnEdit.setOnAction(e -> editFoto(foto));
+        
+        // Delete Button
+        Button btnDelete = new Button("🗑");
+        btnDelete.setStyle(
+            "-fx-background-color: #e74c3c; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-size: 12px; " +
+            "-fx-cursor: hand;"
+        );
+        btnDelete.setOnAction(e -> deleteFoto(foto));
+        
+        buttonBox.getChildren().addAll(btnEdit, btnDelete);
+        
+        card.getChildren().addAll(imageView, lblWarna, buttonBox);
+        return card;
+    }
+    
+    
+        private void replaceFoto(FotoProduk foto) {
+            if (selectedProduk == null) return;
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Ganti Foto Produk");
+            fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+            );
+
+            // Buka dialog pilih file
+            File file = fileChooser.showOpenDialog(getScene().getWindow());
+
+            if (file != null) {
+                // 1. Hapus foto lama dari database
+                fotoProdukDAO.deleteFotoProduk(foto.getIdFotoProduk());
+
+                // 2. Siapkan objek foto baru
+                // Kita ambil ID Produk dan ID Warna dari foto lama agar konteksnya tetap sama
+                FotoProduk newFoto = new FotoProduk();
+                newFoto.setIdProduk(selectedProduk.getIdProduk());
+                newFoto.setIdWarna(foto.getIdWarna()); // Warna tetap sama seperti sebelumnya
+
+                // 3. Upload file baru
+                if (fotoProdukDAO.createFotoProduk(newFoto, file)) {
+                    showAlert("Foto berhasil diganti!", Alert.AlertType.INFORMATION);
+                    loadFotoProdukList(selectedProduk.getIdProduk());
+                } else {
+                    // Jika gagal upload, ada kemungkinan foto lama hilang tapi baru belum masuk.
+                    // Tapi biasanya DAO createFotoProduk sudah handle error dengan baik.
+                    showAlert("Gagal mengganti foto!", Alert.AlertType.ERROR);
+                }
+            }
+        }
+    
+    // ==================== COMBO BOX DATA LOADING ====================
+    
+    private void loadComboBoxData() {
+        List<Merk> merkList = merkDAO.getAllMerk();
+        cbMerk.setItems(FXCollections.observableArrayList(merkList));
+        
+        List<Tipe> tipeList = tipeDAO.getAllTipe();
+        cbTipe.setItems(FXCollections.observableArrayList(tipeList));
+    }
+    
+    private void loadVarianComboData() {
+        List<Ukuran> ukuranList = ukuranDAO.getAllUkuran();
+        cbUkuran.setItems(FXCollections.observableArrayList(ukuranList));
+        
+        List<Warna> warnaList = warnaDAO.getAllWarna();
+        cbWarnaVarian.setItems(FXCollections.observableArrayList(warnaList));
+    }
+    
+    private void loadFotoComboData() {
+        List<Warna> warnaList = warnaDAO.getAllWarna();
+        cbWarnaFoto.setItems(FXCollections.observableArrayList(warnaList));
+    }
+    
+    // ==================== CRUD OPERATIONS ====================
+    
+    // --- Produk CRUD ---
+    
+    private void saveProduk() {
+        try {
+            if (txtNamaKaos.getText().trim().isEmpty()) {
+                showAlert("Nama produk harus diisi!", Alert.AlertType.WARNING);
+                return;
+            }
+            
+            Produk produk = selectedProduk != null ? selectedProduk : new Produk();
+            produk.setNamaKaos(txtNamaKaos.getText().trim());
+            produk.setIdMerk(cbMerk.getValue().getIdMerk());
+            produk.setIdTipe(cbTipe.getValue().getIdTipe());
+            produk.setHargaJual(Long.parseLong(txtHargaJual.getText().trim()));
+            produk.setHargaPokok(Long.parseLong(txtHargaPokok.getText().trim()));
+            produk.setBerat(new BigDecimal(txtBerat.getText().trim()));
+            produk.setDeskripsi(txtDeskripsi.getText().trim());
+            produk.setSpesifikasi(txtSpesifikasi.getText().trim());
+            
+            boolean success;
+            if (selectedProduk == null) {
+                success = produkDAO.tambahProduk(produk);
+                if (success) {
+                    selectedProduk = produkDAO.getLastProduk();
+                }
+            } else {
+                success = produkDAO.updateProduk(produk);
+            }
+            
+            if (success) {
+                showAlert("Produk berhasil disimpan!", Alert.AlertType.INFORMATION);
+                loadProdukList("");
+            } else {
+                showAlert("Gagal menyimpan produk!", Alert.AlertType.ERROR);
+            }
+        } catch (Exception e) {
+            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
         }
     }
-
+    
     private void deleteProduk() {
-        Produk selected = tableView.getSelectionModel().getSelectedItem();
-        if (selected == null) {
+        if (selectedProduk == null) {
             showAlert("Pilih produk yang akan dihapus!", Alert.AlertType.WARNING);
             return;
         }
-
+        
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Konfirmasi Hapus");
-        confirm.setHeaderText(null);
-        confirm.setContentText("Apakah Anda yakin ingin menghapus produk ini?");
-        confirm.showAndWait().ifPresent(btn -> {
-            if (btn == ButtonType.OK) {
-                if (produkDAO.deleteProduk(selected.getIdProduk())) {
-                    showAlert("Produk berhasil dihapus!", Alert.AlertType.INFORMATION);
-                    loadData("");
-                } else {
-                    showAlert("Gagal menghapus produk!", Alert.AlertType.ERROR);
-                }
+        confirm.setTitle("Konfirmasi");
+        confirm.setHeaderText("Hapus Produk");
+        confirm.setContentText("Yakin ingin menghapus produk ini beserta semua varian dan fotonya?");
+        
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            // Hapus varian dan foto terkait
+            varianDAO.deleteAllVarianByProduk(selectedProduk.getIdProduk());
+            fotoProdukDAO.deleteAllFotoByProduk(selectedProduk.getIdProduk());
+            
+            if (produkDAO.deleteProduk(selectedProduk.getIdProduk())) {
+                showAlert("Produk berhasil dihapus!", Alert.AlertType.INFORMATION);
+                clearProdukForm();
+                loadProdukList("");
+            } else {
+                showAlert("Gagal menghapus produk!", Alert.AlertType.ERROR);
             }
-        });
+        }
     }
+    
+    private void clearProdukForm() {
+        selectedProduk = null;
+        txtNamaKaos.clear();
+        cbMerk.setValue(null);
+        cbTipe.setValue(null);
+        txtHargaJual.clear();
+        txtHargaPokok.clear();
+        txtBerat.clear();
+        txtDeskripsi.clear();
+        txtSpesifikasi.clear();
+        tableVarian.getItems().clear();
+        fotoProdukContainer.getChildren().clear();
+    }
+    
+    // --- Varian CRUD ---
+    
+    private void addVarian() {
+        if (selectedProduk == null) {
+            showAlert("Pilih produk terlebih dahulu!", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        try {
+            if (cbUkuran.getValue() == null || cbWarnaVarian.getValue() == null) {
+                showAlert("Ukuran dan warna harus dipilih!", Alert.AlertType.WARNING);
+                return;
+            }
+            
+            // Cek duplikat
+            if (varianDAO.isVarianExists(selectedProduk.getIdProduk(), 
+                    cbUkuran.getValue().getIdUkuran(), 
+                    cbWarnaVarian.getValue().getIdWarna(), null)) {
+                showAlert("Varian dengan ukuran dan warna ini sudah ada!", Alert.AlertType.WARNING);
+                return;
+            }
+            
+            Varian varian = new Varian();
+            varian.setIdProduk(selectedProduk.getIdProduk());
+            varian.setIdUkuran(cbUkuran.getValue().getIdUkuran());
+            varian.setIdWarna(cbWarnaVarian.getValue().getIdWarna());
+            varian.setStokKaos(Long.parseLong(txtStok.getText().trim()));
+            
+            if (varianDAO.createVarian(varian)) {
+                showAlert("Varian berhasil ditambahkan!", Alert.AlertType.INFORMATION);
+                loadVarianList(selectedProduk.getIdProduk());
+                clearVarianForm();
+            } else {
+                showAlert("Gagal menambahkan varian!", Alert.AlertType.ERROR);
+            }
+        } catch (Exception e) {
+            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+    
+    private void updateVarian() {
+        if (selectedVarian == null) {
+            showAlert("Pilih varian yang akan diupdate!", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        try {
+            selectedVarian.setStokKaos(Long.parseLong(txtStok.getText().trim()));
+            
+            if (varianDAO.updateVarian(selectedVarian)) {
+                showAlert("Stok varian berhasil diupdate!", Alert.AlertType.INFORMATION);
+                loadVarianList(selectedProduk.getIdProduk());
+                clearVarianForm();
+            } else {
+                showAlert("Gagal update varian!", Alert.AlertType.ERROR);
+            }
+        } catch (Exception e) {
+            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+    
+    private void deleteVarian() {
+        if (selectedVarian == null) {
+            showAlert("Pilih varian yang akan dihapus!", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Konfirmasi");
+        confirm.setHeaderText("Hapus Varian");
+        confirm.setContentText("Yakin ingin menghapus varian ini?");
+        
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            if (varianDAO.deleteVarian(selectedVarian.getIdVarian())) {
+                showAlert("Varian berhasil dihapus!", Alert.AlertType.INFORMATION);
+                loadVarianList(selectedProduk.getIdProduk());
+                clearVarianForm();
+            } else {
+                showAlert("Gagal menghapus varian!", Alert.AlertType.ERROR);
+            }
+        }
+    }
+    
+    private void loadVarianToForm(Varian varian) {
+        cbUkuran.setValue(findUkuranById(varian.getIdUkuran()));
+        cbWarnaVarian.setValue(findWarnaById(varian.getIdWarna()));
+        txtStok.setText(varian.getStokKaos().toString());
+    }
+    
+    private void clearVarianForm() {
+        selectedVarian = null;
+        cbUkuran.setValue(null);
+        cbWarnaVarian.setValue(null);
+        txtStok.clear();
+    }
+    
+    // --- Foto Produk CRUD ---
+    
+    private void uploadFoto() {
+        if (selectedProduk == null) {
+            showAlert("Pilih produk terlebih dahulu!", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        if (cbWarnaFoto.getValue() == null) {
+            showAlert("Pilih warna foto!", Alert.AlertType.WARNING);
+            return;
+        }
+        
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Pilih Foto Produk");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+        
+        File file = fileChooser.showOpenDialog(getScene().getWindow());
+        if (file != null) {
+            FotoProduk foto = new FotoProduk();
+            foto.setIdProduk(selectedProduk.getIdProduk());
+            foto.setIdWarna(cbWarnaFoto.getValue().getIdWarna());
+            
+            if (fotoProdukDAO.createFotoProduk(foto, file)) {
+                showAlert("Foto berhasil diupload!", Alert.AlertType.INFORMATION);
+                loadFotoProdukList(selectedProduk.getIdProduk());
+                cbWarnaFoto.setValue(null);
+            } else {
+                showAlert("Gagal upload foto!", Alert.AlertType.ERROR);
+            }
+        }
+    }
+    
+    private void editFoto(FotoProduk foto) {
+        if (selectedProduk == null) return;
 
+        // --- 1. PILIH WARNA BARU ---
+        List<Warna> listWarna = warnaDAO.getAllWarna();
+        
+        // Cari warna saat ini untuk dijadikan nilai default di dialog
+        Warna currentWarna = listWarna.stream()
+            .filter(w -> w.getIdWarna().equals(foto.getIdWarna()))
+            .findFirst()
+            .orElse(null);
+
+        // Tampilkan Dialog Pilihan Warna
+        ChoiceDialog<Warna> dialogWarna = new ChoiceDialog<>(currentWarna, listWarna);
+        dialogWarna.setTitle("Edit Foto");
+        dialogWarna.setHeaderText("Pilih Warna Baru");
+        dialogWarna.setContentText("Pindahkan foto ke warna:");
+
+        Optional<Warna> resultWarna = dialogWarna.showAndWait();
+        if (!resultWarna.isPresent()) {
+            return; // User menekan Cancel di pilih warna
+        }
+        
+        Warna selectedWarna = resultWarna.get();
+
+        // --- 2. PILIH FILE GAMBAR BARU ---
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Pilih Foto Pengganti");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
+        );
+
+        File file = fileChooser.showOpenDialog(getScene().getWindow());
+        if (file == null) {
+            return; // User menekan Cancel di pilih file
+        }
+
+        // --- 3. PROSES UPDATE (ID TETAP) ---
+        // Set warna baru ke objek foto
+        foto.setIdWarna(selectedWarna.getIdWarna());
+
+        // Panggil DAO update yang sudah diperbaiki sebelumnya
+        // Logic DAO akan: Upload file baru -> Update URL di DB -> Hapus file lama
+        if (fotoProdukDAO.updateFotoProduk(foto, file)) {
+            showAlert("Foto berhasil diupdate!", Alert.AlertType.INFORMATION);
+            
+            // --- 4. REFRESH LANGSUNG ---
+            // Kita ambil ulang list foto dari database dan render ulang seluruh kartu
+            loadFotoProdukList(selectedProduk.getIdProduk());
+            
+        } else {
+            showAlert("Gagal mengupdate foto!", Alert.AlertType.ERROR);
+        }
+    }
+    
+    private void deleteFoto(FotoProduk foto) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Konfirmasi");
+        confirm.setHeaderText("Hapus Foto");
+        confirm.setContentText("Yakin ingin menghapus foto ini?");
+        
+        Optional<ButtonType> result = confirm.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            if (fotoProdukDAO.deleteFotoProduk(foto.getIdFotoProduk())) {
+                showAlert("Foto berhasil dihapus!", Alert.AlertType.INFORMATION);
+                loadFotoProdukList(selectedProduk.getIdProduk());
+            } else {
+                showAlert("Gagal menghapus foto!", Alert.AlertType.ERROR);
+            }
+        }
+    }
+    
+    // ==================== HELPER METHODS ====================
+    
+    private Merk findMerkById(Long id) {
+        return cbMerk.getItems().stream()
+            .filter(m -> m.getIdMerk().equals(id))
+            .findFirst()
+            .orElse(null);
+    }
+    
+    private Tipe findTipeById(Long id) {
+        return cbTipe.getItems().stream()
+            .filter(t -> t.getIdTipe().equals(id))
+            .findFirst()
+            .orElse(null);
+    }
+    
+    private Ukuran findUkuranById(Long id) {
+        return cbUkuran.getItems().stream()
+            .filter(u -> u.getIdUkuran().equals(id))
+            .findFirst()
+            .orElse(null);
+    }
+    
+    private Warna findWarnaById(Long id) {
+        return cbWarnaVarian.getItems().stream()
+            .filter(w -> w.getIdWarna().equals(id))
+            .findFirst()
+            .orElse(null);
+    }
+    
+    // ==================== STYLING METHODS ====================
+    
+    private void styleTextField(TextField field) {
+        field.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-border-color: #e1e8ed; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 6; " +
+            "-fx-background-radius: 6; " +
+            "-fx-padding: 8 12; " +
+            "-fx-font-size: 13px;"
+        );
+        field.setPrefWidth(300);
+    }
+    
+    private void styleTextArea(TextArea area) {
+        area.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-border-color: #e1e8ed; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 6; " +
+            "-fx-background-radius: 6; " +
+            "-fx-padding: 8 12; " +
+            "-fx-font-size: 13px;"
+        );
+        area.setPrefWidth(300);
+    }
+    
+    private void styleComboBox(ComboBox<?> combo) {
+        combo.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-border-color: #e1e8ed; " +
+            "-fx-border-width: 1; " +
+            "-fx-border-radius: 6; " +
+            "-fx-background-radius: 6;"
+        );
+        combo.setPrefWidth(300);
+    }
+    
+    private Button createStyledButton(String text, String color) {
+        Button btn = new Button(text);
+        btn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 12));
+        btn.setTextFill(Color.WHITE);
+        btn.setPadding(new Insets(8, 16, 8, 16));
+        btn.setStyle(
+            "-fx-background-color: " + color + "; " +
+            "-fx-background-radius: 6; " +
+            "-fx-cursor: hand;"
+        );
+        
+        btn.setOnMouseEntered(e -> btn.setStyle(
+            "-fx-background-color: derive(" + color + ", -10%); " +
+            "-fx-background-radius: 6; " +
+            "-fx-cursor: hand;"
+        ));
+        
+        btn.setOnMouseExited(e -> btn.setStyle(
+            "-fx-background-color: " + color + "; " +
+            "-fx-background-radius: 6; " +
+            "-fx-cursor: hand;"
+        ));
+        
+        return btn;
+    }
+    
     private void showAlert(String message, Alert.AlertType type) {
         Alert alert = new Alert(type);
         alert.setTitle(type == Alert.AlertType.ERROR ? "Error" : 
@@ -340,123 +1051,5 @@ public class ProdukManagementPanel extends VBox {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
-    }
-
-    // ✅ ProdukFormDialog sebagai nested static class — satu file!
-    public static class ProdukFormDialog {
-        private Produk produk;
-        private boolean success = false;
-
-        public ProdukFormDialog(Produk produk) {
-            this.produk = produk;
-        }
-
-        public boolean showAndWait(List<Merk> merkList, List<Tipe> tipeList) {
-            Stage dialog = new Stage();
-            dialog.initModality(Modality.APPLICATION_MODAL);
-            dialog.setTitle(produk == null ? "Tambah Produk" : "Edit Produk");
-
-            GridPane grid = new GridPane();
-            grid.setHgap(10);
-            grid.setVgap(10);
-            grid.setPadding(new Insets(20));
-
-            int row = 0;
-            grid.add(new Label("Nama Kaos:"), 0, row);
-            TextField txtNama = new TextField();
-            grid.add(txtNama, 1, row++);
-
-            grid.add(new Label("Merk:"), 0, row);
-            ComboBox<Merk> cbMerk = new ComboBox<>();
-            cbMerk.getItems().addAll(merkList);
-            grid.add(cbMerk, 1, row++);
-
-            grid.add(new Label("Tipe:"), 0, row);
-            ComboBox<Tipe> cbTipe = new ComboBox<>();
-            cbTipe.getItems().addAll(tipeList);
-            grid.add(cbTipe, 1, row++);
-
-            grid.add(new Label("Harga Jual:"), 0, row);
-            TextField txtHargaJual = new TextField();
-            grid.add(txtHargaJual, 1, row++);
-
-            grid.add(new Label("Harga Pokok:"), 0, row);
-            TextField txtHargaPokok = new TextField();
-            grid.add(txtHargaPokok, 1, row++);
-
-            grid.add(new Label("Deskripsi:"), 0, row);
-            TextArea txtDeskripsi = new TextArea();
-            txtDeskripsi.setPrefRowCount(3);
-            grid.add(txtDeskripsi, 1, row++);
-
-            grid.add(new Label("Spesifikasi:"), 0, row);
-            TextArea txtSpesifikasi = new TextArea();
-            txtSpesifikasi.setPrefRowCount(3);
-            grid.add(txtSpesifikasi, 1, row++);
-
-            if (produk != null) {
-                txtNama.setText(produk.getNamaKaos());
-                cbMerk.setValue(findMerkById(merkList, produk.getIdMerk()));
-                cbTipe.setValue(findTipeById(tipeList, produk.getIdTipe()));
-                txtHargaJual.setText(produk.getHargaJual().toString());
-                txtHargaPokok.setText(produk.getHargaPokok().toString());
-                txtDeskripsi.setText(produk.getDeskripsi());
-                txtSpesifikasi.setText(produk.getSpesifikasi());
-            }
-
-            Button btnCancel = new Button("Batal");
-            Button btnSave = new Button(produk == null ? "Tambah" : "Simpan");
-
-            HBox buttonBox = new HBox(10, btnCancel, btnSave);
-            buttonBox.setAlignment(Pos.CENTER_RIGHT);
-
-            VBox root = new VBox(15, grid, buttonBox);
-            root.setPadding(new Insets(20));
-            Scene scene = new Scene(root);
-            dialog.setScene(scene);
-
-            btnCancel.setOnAction(e -> dialog.close());
-            btnSave.setOnAction(e -> {
-                try {
-                    Produk p = produk != null ? produk : new Produk();
-                    p.setNamaKaos(txtNama.getText().trim());
-                    p.setIdMerk(cbMerk.getValue().getIdMerk());
-                    p.setIdTipe(cbTipe.getValue().getIdTipe());
-                    p.setHargaJual(Long.parseLong(txtHargaJual.getText().trim()));
-                    p.setHargaPokok(Long.parseLong(txtHargaPokok.getText().trim()));
-                    p.setDeskripsi(txtDeskripsi.getText().trim());
-                    p.setSpesifikasi(txtSpesifikasi.getText().trim());
-
-                    ProdukDAO dao = new ProdukDAO(); // ✅ Perbaiki: jangan pakai field yang tidak diinisialisasi
-                    boolean result;
-                    if (produk == null) {
-                        result = dao.tambahProduk(p);
-                    } else {
-                        result = dao.updateProduk(p);
-                    }
-
-                    if (result) {
-                        success = true;
-                        dialog.close();
-                        new Alert(Alert.AlertType.INFORMATION, "Produk berhasil disimpan!").showAndWait();
-                    } else {
-                        new Alert(Alert.AlertType.ERROR, "Gagal menyimpan produk!").showAndWait();
-                    }
-                } catch (Exception ex) {
-                    new Alert(Alert.AlertType.ERROR, "Input tidak valid: " + ex.getMessage()).showAndWait();
-                }
-            });
-
-            dialog.showAndWait();
-            return success;
-        }
-
-        private Merk findMerkById(List<Merk> list, Long id) {
-            return list.stream().filter(m -> m.getIdMerk().equals(id)).findFirst().orElse(null);
-        }
-
-        private Tipe findTipeById(List<Tipe> list, Long id) {
-            return list.stream().filter(t -> t.getIdTipe().equals(id)).findFirst().orElse(null);
-        }
     }
 }

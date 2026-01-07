@@ -62,40 +62,47 @@ public class LaporanAdminPanel extends VBox {
     private void initializeUI() {
 //        this.setSpacing(20);
 //        this.setPadding(new Insets(25));
-        this.setPadding(Insets.EMPTY); // biarkan kosong karena sudah diatur di contentContainer
-        this.setStyle("-fx-background-color: #f5f5f5;");
-        
-        // Header with title and quick actions
-        HBox headerBox = createHeaderSection();
-        
-        // Filter Section with advanced filters
-        VBox filterSection = createFilterSection();
-        
-        // Statistics Cards
-        HBox statsCards = createStatsCards();
-        
-        // Charts Section (optional - can be toggled)
-        HBox chartsSection = createChartsSection();
-        
-        // Table Section
-        VBox tableSection = createTableSection();
-        
-        // Buat ScrollPane sebagai container utama
-        ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setFitToWidth(true);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scrollPane.setStyle("-fx-background-color: #f5f5f5;");
+        TabPane tabPane = new TabPane();
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE); // tidak bisa ditutup
 
+        Tab tabPenjualan = new Tab("Penjualan", createContentContainer()); // isi dengan semua komponen sekarang
+        Tab tabRugiLaba = new Tab("Rugi Laba", new LaporanRugiLaba());
+
+        tabPane.getTabs().addAll(tabPenjualan, tabRugiLaba);
+        this.getChildren().add(tabPane);
+    }
+    
+    private ScrollPane createContentContainer() {
         // Buat VBox untuk menampung semua konten
         VBox contentContainer = new VBox(20);
         contentContainer.setPadding(new Insets(25));
+
+        // Header
+        HBox headerBox = createHeaderSection();
+
+        // Filter Section
+        VBox filterSection = createFilterSection();
+
+        // Statistics Cards
+        HBox statsCards = createStatsCards();
+
+        // Charts Section
+        HBox chartsSection = createChartsSection();
+
+        // Table Section
+        VBox tableSection = createTableSection();
+
+        // Tambahkan semua ke container
         contentContainer.getChildren().addAll(headerBox, filterSection, statsCards, chartsSection, tableSection);
 
-        scrollPane.setContent(contentContainer);
+        // Bungkus dengan ScrollPane
+        ScrollPane scrollPane = new ScrollPane(contentContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle("-fx-background-color: #f5f5f5;");
 
-        // Masukkan ScrollPane ke dalam panel
-        this.getChildren().add(scrollPane);
+        return scrollPane; // Kembalikan ScrollPane, bukan VBox
     }
     
     private HBox createHeaderSection() {
