@@ -20,6 +20,8 @@ import dao.UserDAO;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import model.JamOperasional;
 
 public class LoginPage extends Application {
@@ -119,23 +121,33 @@ public class LoginPage extends Application {
         VBox logoBox = new VBox(10);
         logoBox.setAlignment(Pos.CENTER);
 
-        // Logo Circle
         StackPane logoCircle = new StackPane();
+
         Circle circle = new Circle(50);
         circle.setFill(Color.web("#667eea"));
         circle.setStroke(Color.web("#764ba2"));
         circle.setStrokeWidth(3);
-        circle.setEffect(new javafx.scene.effect.DropShadow(15, Color.rgb(102, 126, 234, 0.4)));
+        circle.setEffect(
+            new javafx.scene.effect.DropShadow(
+                15, Color.rgb(102, 126, 234, 0.4)
+            )
+        );
 
-        Label icon = new Label("🛍️");
-        icon.setFont(Font.font(40));
+        Image logoImage = new Image(
+            getClass().getResourceAsStream("/resource/distro-zone.png")
+        );
 
-        logoCircle.getChildren().addAll(circle, icon);
+        ImageView logoView = new ImageView(logoImage);
+        logoView.setFitWidth(65);
+        logoView.setFitHeight(65);
+        logoView.setPreserveRatio(true);
 
+        logoCircle.getChildren().addAll(circle, logoView);
         logoBox.getChildren().add(logoCircle);
 
         return logoBox;
     }
+
 
     private VBox createTitleSection() {
         VBox titleBox = new VBox(8);
