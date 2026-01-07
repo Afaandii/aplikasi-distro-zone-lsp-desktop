@@ -71,8 +71,6 @@ public class DashboardAdmin extends Application {
         cardContainer.addCard("ukuran", new UkuranManagementPanel());
         cardContainer.addCard("warna", new WarnaManagementPanel());
         cardContainer.addCard("produk", new ProdukManagementPanel(currentUser));
-        cardContainer.addCard("foto_produk", new FotoProdukManagementPanel());
-        cardContainer.addCard("varian", new VarianManagementPanel());
         cardContainer.addCard("jam_operasional", new JamOperasionalManagementPanel());
         cardContainer.addCard("laporan", new LaporanAdminPanel());
 
@@ -230,8 +228,6 @@ public class DashboardAdmin extends Application {
             createMenuItem("Ukuran", "ukuran", false),
             createMenuItem("Warna", "warna", false),
             createMenuItem("Produk", "produk", false),
-            createMenuItem("Foto Produk", "foto_produk", false),
-            createMenuItem("Varian Produk", "varian", false),
             createMenuItem("Jam Operasional", "jam_operasional", false)
         );
 

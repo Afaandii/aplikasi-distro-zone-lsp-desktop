@@ -350,39 +350,8 @@ public class KaryawanManagementPanel extends VBox {
                 }
             }
         });
-        
-        TableColumn<User, String> colFoto = new TableColumn<>("FOTO");
-            colFoto.setCellValueFactory(cell -> 
-                new javafx.beans.property.SimpleStringProperty(cell.getValue().getFotoProfile())
-            );
-            colFoto.setPrefWidth(80);
-            colFoto.setCellFactory(col -> new TableCell<User, String>() {
-                private final ImageView imageView = new ImageView();
 
-                {
-                    imageView.setFitWidth(50);
-                    imageView.setFitHeight(50);
-                    imageView.setPreserveRatio(true);
-                    imageView.setImage(new Image(getClass().getResource("/resource/default.jpg").toExternalForm())); // placeholder awal
-                }
-
-                @Override
-                protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setGraphic(null);
-                    } else {
-                        // Tampilkan placeholder dulu
-                        imageView.setImage(new Image(getClass().getResource("/resource/default.jpg").toExternalForm()));
-                        setGraphic(imageView);
-
-                        // Load gambar async
-                        loadImageAsync(item, imageView);
-                    }
-                }
-            });
-
-        table.getColumns().addAll(colId, colNama, colUsername, colNik, colAlamat, colKota, colNoTelp, colRole, colFoto);
+        table.getColumns().addAll(colId, colNama, colUsername, colNik, colAlamat, colKota, colNoTelp, colRole);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         
         return table;
@@ -395,7 +364,7 @@ public class KaryawanManagementPanel extends VBox {
     private void loadData(String searchTerm) {
         List<User> allUsers = userDAO.getAllUsers(searchTerm);
         List<User> filtered = allUsers.stream()
-            .filter(u -> !"Customer".equalsIgnoreCase(u.getNamaRole()))
+            .filter(u -> !"Customer".equalsIgnoreCase(u.getNamaRole()) && !"Admin".equalsIgnoreCase(u.getNamaRole()))
             .collect(Collectors.toList());
 
         userList = FXCollections.observableArrayList(filtered);

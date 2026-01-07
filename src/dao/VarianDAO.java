@@ -227,4 +227,16 @@ public class VarianDAO {
            return false;
        }
    }
+   
+   public boolean deleteAllVarianByProduk(Long idProduk) {
+    String sql = "DELETE FROM varian WHERE id_produk = ?";
+    try (Connection conn = DatabaseConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setLong(1, idProduk);
+        return ps.executeUpdate() >= 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
 }

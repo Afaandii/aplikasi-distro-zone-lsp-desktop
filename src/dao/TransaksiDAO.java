@@ -1,6 +1,7 @@
 package dao;
 
 import config.DatabaseConnection;
+import java.math.BigDecimal;
 import model.Transaksi;
 
 import java.sql.*;
@@ -18,7 +19,11 @@ public class TransaksiDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setLong(1, transaksi.getIdCustomer());
+            if (transaksi.getIdCustomer() == null) {
+                stmt.setNull(1, Types.BIGINT);
+            } else {
+                stmt.setLong(1, transaksi.getIdCustomer());
+            }
             stmt.setLong(2, transaksi.getIdKasir());
             stmt.setString(3, transaksi.getKodeTransaksi());
             stmt.setLong(4, transaksi.getTotal());
@@ -123,21 +128,31 @@ public class TransaksiDAO {
     
     // Get profit/loss report
     public Long getLabaRugi(Date startDate, Date endDate) {
-        String sql = "SELECT COALESCE(SUM(dt.jumlah * (dt.harga_satuan - p.harga_pokok)), 0) as laba " +
-                     "FROM detail_transaksi dt " +
-                     "JOIN transaksi t ON dt.id_transaksi = t.id_transaksi " +
-                     "JOIN produk p ON dt.id_produk = p.id_produk " +
-                     "WHERE t.status_transaksi = 'selesai' AND DATE(t.created_at) BETWEEN ? AND ?";
-        
+        String sql = """
+            SELECT 
+                SUM(t.total) AS total_penjualan,
+                SUM(dt.jumlah * p.harga_pokok) AS total_hpp
+            FROM transaksi t
+            JOIN detail_transaksi dt ON t.id_transaksi = dt.id_transaksi
+            JOIN produk p ON dt.id_produk = p.id_produk
+            WHERE t.status_transaksi = 'selesai'
+              AND t.created_at BETWEEN ? AND ?
+            """;
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setDate(1, startDate);
             stmt.setDate(2, endDate);
-            
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return rs.getLong("laba");
+                BigDecimal totalPenjualanBD = rs.getObject("total_penjualan", BigDecimal.class);
+                BigDecimal totalHPPBD = rs.getObject("total_hpp", BigDecimal.class);
+
+                Long totalPenjualan = (totalPenjualanBD != null) ? totalPenjualanBD.longValue() : 0L;
+                Long totalHPP = (totalHPPBD != null) ? totalHPPBD.longValue() : 0L;
+
+                return totalPenjualan - totalHPP;
             }
         } catch (SQLException e) {
             e.printStackTrace();

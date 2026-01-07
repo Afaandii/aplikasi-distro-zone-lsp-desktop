@@ -242,4 +242,38 @@ public class ProdukDAO {
         }
         return list;
     }
+    
+    public Produk getLastProduk() {
+        String sql = "SELECT p.*, m.nama_merk, t.nama_tipe " +
+                     "FROM produk p " +
+                     "LEFT JOIN merk m ON p.id_merk = m.id_merk " +
+                     "LEFT JOIN tipe t ON p.id_tipe = t.id_tipe " +
+                     "ORDER BY p.id_produk DESC LIMIT 1";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                Produk p = new Produk();
+                p.setIdProduk(rs.getLong("id_produk"));
+                p.setIdMerk(rs.getLong("id_merk"));
+                p.setIdTipe(rs.getLong("id_tipe"));
+                p.setNamaKaos(rs.getString("nama_kaos"));
+                p.setHargaJual(rs.getLong("harga_jual"));
+                p.setHargaPokok(rs.getLong("harga_pokok"));
+                p.setDeskripsi(rs.getString("deskripsi"));
+                p.setSpesifikasi(rs.getString("spesifikasi"));
+                p.setBerat(rs.getBigDecimal("berat"));
+                p.setNamaMerk(rs.getString("nama_merk"));
+                p.setNamaTipe(rs.getString("nama_tipe"));
+                p.setCreatedAt(rs.getTimestamp("created_at"));
+                p.setUpdatedAt(rs.getTimestamp("updated_at"));
+                return p;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
