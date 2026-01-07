@@ -1,6 +1,7 @@
 package view;
 
 import dao.DetailTransaksiDAO;
+import dao.JamOperasionalDAO;
 import dao.ProdukDAO;
 import dao.TransaksiDAO;
 import dao.VarianDAO;
@@ -34,6 +35,9 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javafx.beans.binding.BooleanBinding;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
 import model.DetailTransaksi;
 import model.Transaksi;
@@ -64,6 +68,7 @@ public class DashboardKasir {
     // Components - Header
     private Label lblJamRealtime;
     private Label lblStatusToko;
+    private JamOperasionalDAO jamOperasionalDAO = new JamOperasionalDAO();
     private Label lblNamaKasir;
     // Components - Work Area
     private TextField txtSearchProduk;
@@ -122,7 +127,7 @@ public class DashboardKasir {
         primaryStage.setMaximized(true);
         startRealtimeClock();
         Platform.runLater(() -> txtSearchProduk.requestFocus());
-        updateStatusBar("ℹ️", "Siap melayani transaksi", false);
+        updateStatusBar("ℹ", "Siap melayani transaksi", false);
     }
 
     /**
@@ -168,9 +173,14 @@ public class DashboardKasir {
         header.setAlignment(Pos.CENTER_LEFT);
         header.setStyle("-fx-background-color: #2c3e50; -fx-border-width: 0 0 2 0; -fx-border-color: #3498db;");
         // Logo/Brand
-        Label lblLogo = new Label("DistroZone");
-        lblLogo.setFont(Font.font("System", FontWeight.BOLD, 20));
-        lblLogo.setTextFill(Color.WHITE);
+        Node lblLogo;
+        ImageView logoView = new ImageView(
+            new Image(getClass().getResourceAsStream("/resource/distro-zone.png"))
+        );
+        logoView.setFitHeight(28);
+        logoView.setPreserveRatio(true);
+        lblLogo = logoView;
+
         // Separator
         Separator sep1 = new Separator();
         sep1.setOrientation(javafx.geometry.Orientation.VERTICAL);
@@ -783,13 +793,15 @@ public class DashboardKasir {
         }
 
         // Validasi jam operasional
-        if (!isJamOperasional()) {
+        if (!jamOperasionalDAO.isJamOperasionalOffline()) {
+            String message = jamOperasionalDAO.checkJamOperasionalOfflineMessage();
+
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("Transaksi Ditolak");
-            alert.setHeaderText("Diluar Jam Operasional");
-            alert.setContentText("Transaksi hanya dapat dilakukan pada jam " +
-                jamBuka + " - " + jamTutup);
+            alert.setHeaderText("Toko Tidak Beroperasi");
+            alert.setContentText(message);
             alert.showAndWait();
+
             updateStatusBar("⚠️", "Transaksi ditolak. Toko tutup.", true);
             return;
         }
@@ -978,9 +990,9 @@ public class DashboardKasir {
     }
 
     private boolean isJamOperasional() {
-        LocalTime now = LocalTime.now();
-        return !now.isBefore(jamBuka) && !now.isAfter(jamTutup);
+        return jamOperasionalDAO.isJamOperasionalOffline();
     }
+
 
     private String generateNoTransaksi() {
         return "TRX-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20).toUpperCase();
@@ -990,14 +1002,6 @@ public class DashboardKasir {
         clock = new Timeline(new KeyFrame(Duration.ZERO, e -> {
             LocalDateTime now = LocalDateTime.now();
             lblJamRealtime.setText(now.format(dateFormatter) + " | " + now.format(timeFormatter));
-            // Update status toko
-            if (isJamOperasional()) {
-                lblStatusToko.setText("BUKA");
-                lblStatusToko.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-background-radius: 3; -fx-padding: 5 10 5 10; -fx-font-weight: bold;");
-            } else {
-                lblStatusToko.setText("TUTUP");
-                lblStatusToko.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-background-radius: 3; -fx-padding: 5 10 5 10; -fx-font-weight: bold;");
-            }
         }), new KeyFrame(Duration.seconds(1)));
         clock.setCycleCount(Animation.INDEFINITE);
         clock.play();

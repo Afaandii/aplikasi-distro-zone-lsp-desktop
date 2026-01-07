@@ -240,4 +240,34 @@ public class JamOperasionalDAO {
 
      return "Jam operasional toko belum diatur.";
     }
+    
+    /**
+    * Ambil status toko OFFLINE (store) HARI INI dari database
+    * @return "BUKA", "TUTUP", atau "LIBUR"
+    */
+   public String getStatusTokoOfflineHariIni() {
+       LocalDateTime now = LocalDateTime.now();
+       DayOfWeek dayOfWeek = now.getDayOfWeek();
+       String hari = getDayName(dayOfWeek);
+
+       String sql = "SELECT status FROM jam_operasional " +
+                    "WHERE LOWER(hari) = LOWER(?) AND tipe_layanan = 'store'";
+
+       try (Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+           stmt.setString(1, hari);
+           ResultSet rs = stmt.executeQuery();
+
+           if (rs.next()) {
+               return rs.getString("status").toUpperCase();
+           }
+
+       } catch (SQLException e) {
+           e.printStackTrace();
+       }
+
+       return "TUTUP"; // fallback aman
+   }
+
 }

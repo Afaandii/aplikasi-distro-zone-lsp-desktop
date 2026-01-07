@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.paint.ImagePattern;
 
 // Custom container untuk menggantikan CardLayout
 class CardPane extends StackPane {
@@ -132,6 +133,18 @@ public class DashboardAdmin extends Application {
         content.getChildren().addAll(headerBox, statsGrid);
         return content;
     }
+    
+    private ImageView createDefaultAvatar() {
+        Image defaultImage = new Image(
+            getClass().getResourceAsStream("/resource/default.jpg")
+        );
+        ImageView iv = new ImageView(defaultImage);
+        iv.setFitWidth(56);
+        iv.setFitHeight(56);
+        iv.setPreserveRatio(true);
+        return iv;
+    }
+
 
     private VBox createSidebar(Stage primaryStage) {
         // Sidebar utama
@@ -152,9 +165,15 @@ public class DashboardAdmin extends Application {
         HBox logoContainer = new HBox(12);
         logoContainer.setAlignment(Pos.CENTER);
 
-        Label logo = new Label("DistroZone");
-        logo.setFont(Font.font("Segoe UI", FontWeight.BOLD, 24));
-        logo.setTextFill(Color.WHITE);
+        Image logoImage = new Image(
+            getClass().getResourceAsStream("/resource/distro-zone.png")
+        );
+
+        ImageView logo = new ImageView(logoImage);
+        logo.setFitHeight(36);        // atur tinggi logo
+        logo.setPreserveRatio(true);
+        logo.setSmooth(true);
+
 
         logoContainer.getChildren().add(logo);
         header.getChildren().add(logoContainer);
@@ -180,15 +199,31 @@ public class DashboardAdmin extends Application {
     userInfo.setPadding(new Insets(0)); // Padding sudah diatur di userCard
 
     StackPane avatar = new StackPane();
-    Circle avatarCircle = new Circle(28);
-    avatarCircle.setFill(Color.web("#3498db"));
-    avatarCircle.setStroke(Color.WHITE);
-    avatarCircle.setStrokeWidth(2.5);
 
-    Label userIcon = new Label("👤");
-    userIcon.setFont(Font.font(26));
+    double radius = 28;
 
-    avatar.getChildren().addAll(avatarCircle, userIcon);
+    // Border lingkaran
+    Circle avatarBorder = new Circle(radius);
+    avatarBorder.setFill(Color.TRANSPARENT);
+    avatarBorder.setStroke(Color.WHITE);
+    avatarBorder.setStrokeWidth(2.5);
+
+    // Load image
+    Image image;
+    try {
+        String fotoUrl = currentUser.getFotoProfile();
+        image = (fotoUrl != null && !fotoUrl.isEmpty())
+                ? new Image(fotoUrl)
+                : new Image(getClass().getResourceAsStream("/resource/default.jpg"));
+    } catch (Exception e) {
+        image = new Image(getClass().getResourceAsStream("/resource/default.jpg"));
+    }
+
+    // Circle dengan image pattern
+    Circle avatarImage = new Circle(radius - 2);
+    avatarImage.setFill(new ImagePattern(image));
+
+    avatar.getChildren().addAll(avatarBorder, avatarImage);
 
     Label userName = new Label(currentUser.getNama());
     userName.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
@@ -232,7 +267,7 @@ public class DashboardAdmin extends Application {
         );
 
         // --- SETTING ---
-        menuContainer.getChildren().add(createSectionHeader("Setting", "⚙️"));
+        menuContainer.getChildren().add(createSectionHeader("Setting", "⚙"));
         menuContainer.getChildren().add(
             createMenuItem("Karyawan", "karyawan", false)
         );

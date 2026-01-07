@@ -6,6 +6,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -122,9 +124,16 @@ public class LoadingScreen extends Application {
         innerCircle.setStroke(Color.WHITE);
         innerCircle.setStrokeWidth(2.5);
         
-        // Logo Icon
-        Label logoIcon = new Label("🛍️");
-        logoIcon.setFont(Font.font(50));
+        // Logo Image
+        Image logoImage = new Image(
+            getClass().getResourceAsStream("/resource/distro-zone.png")
+        );
+
+        ImageView logoIcon = new ImageView(logoImage);
+        logoIcon.setFitWidth(80);
+        logoIcon.setFitHeight(80);
+        logoIcon.setPreserveRatio(true);
+
         
         logoStack.getChildren().addAll(outerCircle, middleCircle, innerCircle, logoIcon);
         
