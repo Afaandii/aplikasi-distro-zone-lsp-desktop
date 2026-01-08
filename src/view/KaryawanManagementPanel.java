@@ -434,6 +434,47 @@ public class KaryawanManagementPanel extends VBox {
         public KaryawanFormDialog(User user) {
             this.user = user;
         }
+        
+        private PasswordField createStyledPasswordField(String prompt) {
+            PasswordField field = new PasswordField();
+            field.setPromptText(prompt);
+            field.setFont(Font.font("Segoe UI", 13));
+            field.setStyle(
+                "-fx-background-color: #f8f9fa; " +
+                "-fx-background-radius: 10; " +
+                "-fx-border-color: #e1e8ed; " +
+                "-fx-border-width: 1; " +
+                "-fx-border-radius: 10; " +
+                "-fx-padding: 12 15; " +
+                "-fx-prompt-text-fill: #95a5a6;"
+            );
+
+            field.focusedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal) {
+                    field.setStyle(
+                        "-fx-background-color: white; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: #3498db; " +
+                        "-fx-border-width: 2; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-padding: 12 15; " +
+                        "-fx-prompt-text-fill: #95a5a6;"
+                    );
+                } else {
+                    field.setStyle(
+                        "-fx-background-color: #f8f9fa; " +
+                        "-fx-background-radius: 10; " +
+                        "-fx-border-color: #e1e8ed; " +
+                        "-fx-border-width: 1; " +
+                        "-fx-border-radius: 10; " +
+                        "-fx-padding: 12 15; " +
+                        "-fx-prompt-text-fill: #95a5a6;"
+                    );
+                }
+            });
+
+            return field;
+        }
 
         public boolean showAndWait() {
             Stage dialog = new Stage();
@@ -475,7 +516,7 @@ public class KaryawanManagementPanel extends VBox {
             RoleDAO roleDAO = new RoleDAO();
             roleList = roleDAO.getAllRoles();
             cbRole.getItems().addAll(roleList);
-            cbRole.setPromptText("Pilih role...");
+            cbRole.setPromptText("Pilih Role");
             cbRole.setPrefWidth(Double.MAX_VALUE);
             cbRole.setStyle(
                 "-fx-background-color: #f8f9fa; " +
@@ -517,8 +558,7 @@ public class KaryawanManagementPanel extends VBox {
             Label namaLabel = new Label("Nama Lengkap");
             namaLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             namaLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtNama = createStyledTextField("", "👤");
-            txtNama.setPromptText("");
+            TextField txtNama = createStyledTextField("Masukkan nama lengkap karyawan", "👤");
             namaBox.getChildren().addAll(namaLabel, txtNama);
 
             // 🆔 USERNAME
@@ -526,17 +566,22 @@ public class KaryawanManagementPanel extends VBox {
             Label usernameLabel = new Label("Username");
             usernameLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             usernameLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtUsername = createStyledTextField("", "🔑");
-            txtUsername.setPromptText("");
+            TextField txtUsername = createStyledTextField("Buat username unik (tanpa spasi)", "🔑");
             usernameBox.getChildren().addAll(usernameLabel, txtUsername);
+            
+            VBox passwordBox = new VBox(5);
+            Label passwordLabel = new Label("Password");
+            passwordLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
+            passwordLabel.setTextFill(Color.web("#2c3e50"));
+            PasswordField txtPassword = createStyledPasswordField("Masukkan password");
+            passwordBox.getChildren().addAll(passwordLabel, txtPassword);
 
             // 🆔 NIK
             VBox nikBox = new VBox(5);
             Label nikLabel = new Label("NIK");
             nikLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             nikLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtNik = createStyledTextField("", "🆔");
-            txtNik.setPromptText("");
+            TextField txtNik = createStyledTextField("Masukkan nomor induk karyawan", "🆔");
             nikBox.getChildren().addAll(nikLabel, txtNik);
 
             // 📍 ALAMAT
@@ -544,8 +589,7 @@ public class KaryawanManagementPanel extends VBox {
             Label alamatLabel = new Label("Alamat");
             alamatLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             alamatLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtAlamat = createStyledTextField("", "📍");
-            txtAlamat.setPromptText("");
+            TextField txtAlamat = createStyledTextField("Contoh: Jl. Merpati No. 10, Jakarta", "📍");
             alamatBox.getChildren().addAll(alamatLabel, txtAlamat);
 
             // 🏙️ KOTA
@@ -553,8 +597,7 @@ public class KaryawanManagementPanel extends VBox {
             Label kotaLabel = new Label("Kota");
             kotaLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             kotaLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtKota = createStyledTextField("", "🏙️");
-            txtKota.setPromptText("");
+            TextField txtKota = createStyledTextField("Contoh: Jakarta Selatan", "🏙️");
             kotaBox.getChildren().addAll(kotaLabel, txtKota);
 
             // 📞 NO. TELEPON
@@ -562,8 +605,7 @@ public class KaryawanManagementPanel extends VBox {
             Label noTelpLabel = new Label("No. Telepon");
             noTelpLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
             noTelpLabel.setTextFill(Color.web("#2c3e50"));
-            TextField txtNoTelp = createStyledTextField("", "📱");
-            txtNoTelp.setPromptText("");
+            TextField txtNoTelp = createStyledTextField("Contoh: 081234567890", "📱");
             noTelpBox.getChildren().addAll(noTelpLabel, txtNoTelp);
             
             // Tambahkan setelah header, sebelum formContent
@@ -619,6 +661,7 @@ public class KaryawanManagementPanel extends VBox {
                 roleBox,
                 namaBox,
                 usernameBox,
+                passwordBox,
                 nikBox,
                 alamatBox,
                 kotaBox,
@@ -659,18 +702,21 @@ public class KaryawanManagementPanel extends VBox {
                 "-fx-cursor: hand;"
             );
 
-            btnSave.setOnAction(e -> {
+                        btnSave.setOnAction(e -> {
+                // Ambil data dari form
                 String nama = txtNama.getText().trim();
                 String username = txtUsername.getText().trim();
+                String password = txtPassword.getText().trim();
                 String nik = txtNik.getText().trim();
                 String alamat = txtAlamat.getText().trim();
                 String kota = txtKota.getText().trim();
                 String noTelp = txtNoTelp.getText().trim();
-                String role = cbRole.getValue().getNamaRole();
-                Long roleId = cbRole.getValue().getIdRole();
-
+                
+                Role selectedRoleObj = cbRole.getValue();
+                
+                // Validasi Input Wajib
                 if (nama.isEmpty() || username.isEmpty() || nik.isEmpty() ||
-                    alamat.isEmpty() || kota.isEmpty() || noTelp.isEmpty() || role == null) {
+                    alamat.isEmpty() || kota.isEmpty() || noTelp.isEmpty() || selectedRoleObj == null) {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle("⚠️ Perhatian");
                     alert.setHeaderText("Data Tidak Lengkap");
@@ -680,21 +726,33 @@ public class KaryawanManagementPanel extends VBox {
                 }
 
                 UserDAO dao = new UserDAO();
+                boolean operationSuccess = false;
+
+                // --- SCENARIO 1: CREATE (TAMBAH BARU) ---
                 if (user == null) {
+                    
+                    // Validasi Password Wajib saat Create
+                    if (password.isEmpty()) {
+                        Alert alert = new Alert(Alert.AlertType.WARNING);
+                        alert.setTitle("⚠️ Perhatian");
+                        alert.setHeaderText("Password Kosong");
+                        alert.setContentText("Harap isi password untuk karyawan baru!");
+                        alert.showAndWait();
+                        return;
+                    }
+
                     User newUser = new User();
-                    newUser.setIdRole(cbRole.getValue().getIdRole());
+                    newUser.setIdRole(selectedRoleObj.getIdRole());
                     newUser.setNama(nama);
                     newUser.setUsername(username);
                     newUser.setNik(nik);
                     newUser.setAlamat(alamat);
                     newUser.setKota(kota);
                     newUser.setNoTelp(noTelp);
-                    newUser.setPassword(username); // default password = username
+                    newUser.setPassword(password); // DAO createUser akan otomatis hashing ini
 
-                    // ✅ Simpan foto
                     if (dao.createUser(newUser, selectedPhotoFile)) {
-                        success = true;
-                        dialog.close();
+                        operationSuccess = true;
                         Alert alert = new Alert(Alert.AlertType.INFORMATION);
                         alert.setTitle("✅ Berhasil");
                         alert.setHeaderText("Karyawan Ditambahkan");
@@ -704,22 +762,33 @@ public class KaryawanManagementPanel extends VBox {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
                         alert.setTitle("❌ Error");
                         alert.setHeaderText("Gagal Menambahkan");
-                        alert.setContentText("Terjadi kesalahan saat menambahkan karyawan!");
+                        alert.setContentText("Terjadi kesalahan saat menyimpan data (mungkin Username sudah dipakai).");
                         alert.showAndWait();
                     }
+
+                // --- SCENARIO 2: UPDATE (EDIT) ---
                 } else {
+                    
+                    // 1. Update Data Umum (Nama, Alamat, Foto, dll)
                     user.setNama(nama);
                     user.setUsername(username);
                     user.setNik(nik);
                     user.setAlamat(alamat);
                     user.setKota(kota);
                     user.setNoTelp(noTelp);
-                    user.setIdRole(cbRole.getValue().getIdRole());
+                    user.setIdRole(selectedRoleObj.getIdRole());
 
-                    // ✅ Simpan foto
-                    if (dao.updateUser(user, selectedPhotoFile)) {
-                        success = true;
-                        dialog.close();
+                    boolean profileUpdated = dao.updateUser(user, selectedPhotoFile);
+
+                    // 2. Update Password (HANYA jika kolom password diisi)
+                    boolean passwordUpdated = true;
+                    if (!password.isEmpty()) {
+                        // Panggil method khusus updatePassword di DAO
+                        passwordUpdated = dao.updatePassword(user.getIdUser(), password);
+                    }
+
+                    if (profileUpdated && passwordUpdated) {
+                        operationSuccess = true;
                         Alert alert = new Alert(Alert.AlertType.INFORMATION);
                         alert.setTitle("✅ Berhasil");
                         alert.setHeaderText("Data Diperbarui");
@@ -729,9 +798,14 @@ public class KaryawanManagementPanel extends VBox {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
                         alert.setTitle("❌ Error");
                         alert.setHeaderText("Gagal Memperbarui");
-                        alert.setContentText("Terjadi kesalahan saat memperbarui data!");
+                        alert.setContentText("Terjadi kesalahan saat memperbarui data.");
                         alert.showAndWait();
                     }
+                }
+
+                if (operationSuccess) {
+                    success = true;
+                    dialog.close();
                 }
             });
 

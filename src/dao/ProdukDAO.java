@@ -276,4 +276,43 @@ public class ProdukDAO {
         }
         return null;
     }
+    
+    // GET RECENT PRODUK (berdasarkan created_at DESC)
+    public List<Produk> getRecentProduk(int limit) {
+        List<Produk> list = new ArrayList<>();
+        String sql = "SELECT p.*, m.nama_merk, t.nama_tipe " +
+                     "FROM produk p " +
+                     "LEFT JOIN merk m ON p.id_merk = m.id_merk " +
+                     "LEFT JOIN tipe t ON p.id_tipe = t.id_tipe " +
+                     "ORDER BY p.created_at DESC LIMIT ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, limit);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                Produk p = new Produk();
+                p.setIdProduk(rs.getLong("id_produk"));
+                p.setIdMerk(rs.getLong("id_merk"));
+                p.setIdTipe(rs.getLong("id_tipe"));
+                p.setNamaKaos(rs.getString("nama_kaos"));
+                p.setHargaJual(rs.getLong("harga_jual"));
+                p.setHargaPokok(rs.getLong("harga_pokok"));
+                p.setDeskripsi(rs.getString("deskripsi"));
+                p.setSpesifikasi(rs.getString("spesifikasi"));
+                p.setBerat(rs.getBigDecimal("berat"));
+                p.setNamaMerk(rs.getString("nama_merk"));
+                p.setNamaTipe(rs.getString("nama_tipe"));
+                p.setCreatedAt(rs.getTimestamp("created_at"));
+                p.setUpdatedAt(rs.getTimestamp("updated_at"));
+                list.add(p);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

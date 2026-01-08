@@ -42,4 +42,17 @@ public class Warna {
     public String toString() {
         return namaWarna;
     }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Warna warna = (Warna) o;
+        return idWarna != null && idWarna.equals(warna.idWarna);
+    }
+
+    @Override
+    public int hashCode() {
+        return idWarna != null ? idWarna.hashCode() : 0;
+    }
 }

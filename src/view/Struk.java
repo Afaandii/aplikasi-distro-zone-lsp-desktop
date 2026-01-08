@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 
 public class Struk {
 
@@ -50,10 +52,23 @@ public class Struk {
         strukContainer.setStyle("-fx-background-color: white;");
 
         // Header - Nama Toko
-        Label lblNamaToko = new Label("DISTROZONE");
-        lblNamaToko.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
-        lblNamaToko.setAlignment(Pos.CENTER);
-        lblNamaToko.setMaxWidth(Double.MAX_VALUE);
+        Image logo = new Image(
+                getClass().getResourceAsStream("/resource/distro-zone.png")
+        );
+
+        ImageView imgLogo = new ImageView(logo);
+        imgLogo.setFitWidth(150);      // atur sesuai kebutuhan
+        imgLogo.setPreserveRatio(true);
+        imgLogo.setSmooth(true);
+        imgLogo.setCache(true);
+
+        // wrapper supaya center
+        VBox headerLogo = new VBox(imgLogo);
+         headerLogo.setAlignment(Pos.CENTER);
+        headerLogo.setPadding(new Insets(8, 0, 12, 0));
+        headerLogo.setFillWidth(true);
+        headerLogo.setMaxWidth(Double.MAX_VALUE);
+
 
         // Info Transaksi
         VBox infoBox = new VBox(3);
@@ -62,14 +77,25 @@ public class Struk {
         Label lblNoTransaksi = new Label("No. Transaksi: " + noTransaksi);
         lblNoTransaksi.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
         
+        // --- TAMBAHAN ALAMAT TOKO ---
+        Label lblAlamat = new Label("Alamat Toko : Jln. Raya Pegangsaan Timur No.29H Kelapa Gading Jakarta");
+        lblAlamat.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
+        lblAlamat.setWrapText(true);
+        lblAlamat.setAlignment(Pos.CENTER);
+        lblAlamat.setMaxWidth(Double.MAX_VALUE);
+
+        // --- TAMBAHAN NOMOR TELEPON ---
+        Label lblTelp = new Label("Telp : 081234567890");
+        lblTelp.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
+        
         String tanggal = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        Label lblTanggal = new Label(tanggal);
+        Label lblTanggal = new Label("Tanggal Transaksi : " + tanggal);
         lblTanggal.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
         
         Label lblKasir = new Label("Kasir: " + namaKasir);
         lblKasir.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
         
-        infoBox.getChildren().addAll(lblNoTransaksi, lblTanggal, lblKasir);
+        infoBox.getChildren().addAll(lblAlamat, lblTelp, lblNoTransaksi, lblTanggal, lblKasir);
 
         Separator sep1 = new Separator();
         sep1.setStyle("-fx-border-color: #bdc3c7; -fx-border-width: 1px; -fx-border-style: dashed;");
@@ -140,7 +166,7 @@ public class Struk {
         // Pembayaran
         if (isTunai) {
             HBox bayarRow = new HBox();
-            Label lblBayarLabel = new Label("Bayar");
+            Label lblBayarLabel = new Label("Tunai");
             lblBayarLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #34495e;");
             
             Region spacer4 = new Region();
@@ -190,7 +216,7 @@ public class Struk {
 
         // Add all to container
         strukContainer.getChildren().addAll(
-            lblNamaToko,
+            headerLogo,
             infoBox,
             sep1,
             itemsBox,
@@ -206,46 +232,10 @@ public class Struk {
         scrollPane.setFitToHeight(true);
         scrollPane.setStyle("-fx-background-color: white; -fx-background: white;");
 
-        // Buttons
-        btnCetakPDF = new Button("🖨️ Simpan sebagai PDF");
-        btnCetakPDF.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; " +
-                            "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;");
-        btnCetakPDF.setOnMouseEntered(e -> 
-            btnCetakPDF.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; " +
-                                "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;"));
-        btnCetakPDF.setOnMouseExited(e -> 
-            btnCetakPDF.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; " +
-                                "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;"));
-        btnCetakPDF.setOnAction(e -> {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
-                javafx.scene.control.Alert.AlertType.INFORMATION);
-            alert.setTitle("Info");
-            alert.setHeaderText(null);
-            alert.setContentText("Fitur PDF akan diimplementasikan.");
-            alert.showAndWait();
-        });
-
-        btnTutup = new Button("Tutup");
-        btnTutup.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; " +
-                         "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;");
-        btnTutup.setOnMouseEntered(e -> 
-            btnTutup.setStyle("-fx-background-color: #7f8c8d; -fx-text-fill: white; " +
-                             "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;"));
-        btnTutup.setOnMouseExited(e -> 
-            btnTutup.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; " +
-                             "-fx-font-size: 13px; -fx-padding: 10 20; -fx-cursor: hand;"));
-        btnTutup.setOnAction(e -> stage.close());
-
-        HBox buttonBar = new HBox(15);
-        buttonBar.setAlignment(Pos.CENTER);
-        buttonBar.setPadding(new Insets(15));
-        buttonBar.setStyle("-fx-background-color: white;");
-        buttonBar.getChildren().addAll(btnCetakPDF, btnTutup);
-
         VBox mainLayout = new VBox();
         mainLayout.setStyle("-fx-background-color: white;");
         VBox.setVgrow(scrollPane, Priority.ALWAYS);
-        mainLayout.getChildren().addAll(scrollPane, buttonBar);
+        mainLayout.getChildren().addAll(scrollPane);
 
         Scene scene = new Scene(mainLayout, 450, 600);
         stage.setScene(scene);
