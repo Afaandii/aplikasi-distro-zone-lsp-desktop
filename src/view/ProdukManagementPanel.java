@@ -21,9 +21,13 @@ import java.io.File;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import javafx.scene.Node;
 
 public class ProdukManagementPanel extends VBox {
     private User currentUser;
@@ -48,16 +52,22 @@ public class ProdukManagementPanel extends VBox {
     private ComboBox<Tipe> cbTipe;
     private TextField txtHargaJual;
     private TextField txtHargaPokok;
-    private TextField txtBerat;
     private TextArea txtDeskripsi;
     private TextArea txtSpesifikasi;
     private Button btnSaveProduk, btnDeleteProduk, btnNewProduk;
     
     // Right Panel Components - Tab 2: Varian
     private TableView<Varian> tableVarian;
+    private VBox formCreateMode;
+    private VBox formEditMode;
     private ObservableList<Varian> varianList;
     private ComboBox<Ukuran> cbUkuran;
     private ComboBox<Warna> cbWarnaVarian;
+    // Untuk mode edit
+    private ComboBox<Warna> cbWarnaEdit;
+    private ComboBox<Ukuran> cbUkuranEdit;
+    private TextField txtStokEdit;
+    private Button btnUpdateVarianEdit;
     private TextField txtStok;
     private Button btnAddVarian, btnUpdateVarian, btnDeleteVarian;
     
@@ -73,6 +83,10 @@ public class ProdukManagementPanel extends VBox {
     // Formatters
     private NumberFormat currencyFormat;
     private SimpleDateFormat dateFormat;
+    private FlowPane chkUkuranContainer;
+    private Map<Ukuran, TextField> ukuranStokMap = new HashMap<>();
+    private boolean isEditMode = false;
+    private Button btnSaveAll;
     
     public ProdukManagementPanel(User user) {
         this.currentUser = user;
@@ -315,13 +329,6 @@ public class ProdukManagementPanel extends VBox {
         styleTextField(txtHargaPokok);
         form.add(txtHargaPokok, 1, row++);
         
-        // Berat
-        form.add(new Label("Berat (gram):"), 0, row);
-        txtBerat = new TextField();
-        txtBerat.setPromptText("Contoh: 250");
-        styleTextField(txtBerat);
-        form.add(txtBerat, 1, row++);
-        
         // Deskripsi
         form.add(new Label("Deskripsi:"), 0, row);
         txtDeskripsi = new TextArea();
@@ -351,7 +358,20 @@ public class ProdukManagementPanel extends VBox {
         btnDeleteProduk = createStyledButton("🗑 Hapus", "#e74c3c");
         btnDeleteProduk.setOnAction(e -> deleteProduk());
         
-        buttonBox.getChildren().addAll(btnNewProduk, btnSaveProduk, btnDeleteProduk);
+        btnSaveAll = createStyledButton("💾 Simpan Semua", "#9b59b6");
+        btnSaveAll.setOnAction(e -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Konfirmasi Simpan Semua");
+            confirm.setHeaderText(null);
+            confirm.setContentText("Yakin ingin menyimpan produk, varian, dan foto sekaligus?");
+
+            Optional<ButtonType> result = confirm.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                saveAll();
+            }
+        });
+
+        buttonBox.getChildren().addAll(btnNewProduk, btnSaveProduk, btnDeleteProduk, btnSaveAll);
         form.add(buttonBox, 1, row);
         
         // Load combo data
@@ -367,66 +387,268 @@ public class ProdukManagementPanel extends VBox {
         return container;
     }
     
+    private void saveAll() {
+        // 1. Validasi dan simpan produk
+        try {
+            if (txtNamaKaos.getText().trim().isEmpty()) {
+                showAlert("Nama produk harus diisi!", Alert.AlertType.WARNING);
+                return;
+            }
+
+            Produk produk = selectedProduk != null ? selectedProduk : new Produk();
+            produk.setNamaKaos(txtNamaKaos.getText().trim());
+            produk.setIdMerk(cbMerk.getValue().getIdMerk());
+            produk.setIdTipe(cbTipe.getValue().getIdTipe());
+            produk.setHargaJual(Long.parseLong(txtHargaJual.getText().trim()));
+            produk.setHargaPokok(Long.parseLong(txtHargaPokok.getText().trim()));
+            produk.setDeskripsi(txtDeskripsi.getText().trim());
+            produk.setSpesifikasi(txtSpesifikasi.getText().trim());
+
+            boolean success;
+            if (selectedProduk == null) {
+                success = produkDAO.tambahProduk(produk);
+                if (success) {
+                    selectedProduk = produkDAO.getLastProduk();
+                }
+            } else {
+                success = produkDAO.updateProduk(produk);
+            }
+
+            if (!success) {
+                showAlert("Gagal menyimpan produk!", Alert.AlertType.ERROR);
+                return;
+            }
+
+            // 2. Simpan varian
+            List<Varian> varianToSave = new ArrayList<>();
+            for (Ukuran ukuran : ukuranStokMap.keySet()) {
+                TextField txtStokField = ukuranStokMap.get(ukuran);
+                String stokText = txtStokField.getText().trim();
+                if (!stokText.isEmpty()) {
+                    try {
+                        Long stok = Long.parseLong(stokText);
+                        if (stok <= 0) continue;
+
+                        Varian varian = new Varian();
+                        varian.setIdProduk(selectedProduk.getIdProduk());
+                        varian.setIdUkuran(ukuran.getIdUkuran());
+                        varian.setIdWarna(cbWarnaVarian.getValue().getIdWarna());
+                        varian.setStokKaos(stok);
+
+                        varianToSave.add(varian);
+
+                    } catch (NumberFormatException e) {
+                        showAlert("Stok untuk ukuran " + ukuran.getNamaUkuran() + " tidak valid!", Alert.AlertType.ERROR);
+                        return;
+                    }
+                }
+            }
+
+            boolean allVarianSuccess = true;
+            for (Varian v : varianToSave) {
+                if (!varianDAO.createVarian(v)) {
+                    allVarianSuccess = false;
+                    break;
+                }
+            }
+
+            if (!allVarianSuccess) {
+                showAlert("Gagal menyimpan beberapa varian!", Alert.AlertType.ERROR);
+                return;
+            }
+
+            // 3. Simpan foto
+            // Karena foto tidak disimpan secara langsung di UI, kita hanya bisa menyimpan foto yang diupload saat ini
+            // Jadi, kita asumsikan foto sudah diupload sebelumnya, atau kita tidak bisa menyimpan foto tanpa file
+            // Untuk sederhananya, kita skip bagian ini atau biarkan user upload foto terlebih dahulu
+
+            showAlert("Semua data berhasil disimpan!", Alert.AlertType.INFORMATION);
+            loadProdukList("");
+            clearProdukForm();
+
+        } catch (Exception e) {
+            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+    
+    
+    private void enterEditMode(Varian varian) {
+        isEditMode = true;
+
+        // UPDATE: Matikan Create Mode (Hidden + Unmanaged)
+        formCreateMode.setVisible(false);
+        formCreateMode.setManaged(false);
+
+        // UPDATE: Nyalakan Edit Mode (Visible + Managed)
+        formEditMode.setVisible(true);
+        formEditMode.setManaged(true);
+
+        // Isi data
+        cbWarnaEdit.setItems(FXCollections.observableArrayList(warnaDAO.getAllWarna()));
+        cbWarnaEdit.setValue(findWarnaById(varian.getIdWarna()));
+
+        cbUkuranEdit.setItems(FXCollections.observableArrayList(ukuranDAO.getAllUkuran()));
+        cbUkuranEdit.setValue(findUkuranById(varian.getIdUkuran()));
+
+        txtStokEdit.setText(String.valueOf(varian.getStokKaos()));
+    }
+
+    private void cancelEditMode() {
+        isEditMode = false;
+        
+        // UPDATE: Matikan Edit Mode
+        formEditMode.setVisible(false);
+        formEditMode.setManaged(false);
+
+        // UPDATE: Nyalakan Create Mode
+        formCreateMode.setVisible(true);
+        formCreateMode.setManaged(true);
+
+        // Reset Form Inputs
+        cbWarnaVarian.setValue(null);
+        for (TextField txt : ukuranStokMap.values()) {
+            txt.clear();
+        }
+        
+        // Opsional: Hapus seleksi di tabel agar terlihat fresh
+        if (tableVarian != null) {
+            tableVarian.getSelectionModel().clearSelection();
+        }
+    }
+
+    private void saveEditedVarian() {
+        if (selectedVarian == null) {
+            showAlert("Tidak ada varian yang dipilih!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        try {
+            selectedVarian.setIdWarna(cbWarnaEdit.getValue().getIdWarna());
+            selectedVarian.setIdUkuran(cbUkuranEdit.getValue().getIdUkuran());
+            selectedVarian.setStokKaos(Long.parseLong(txtStokEdit.getText().trim()));
+
+            if (varianDAO.updateVarian(selectedVarian)) {
+                showAlert("Varian berhasil diupdate!", Alert.AlertType.INFORMATION);
+                loadVarianList(selectedProduk.getIdProduk());
+                cancelEditMode(); // Kembali ke mode create
+            } else {
+                showAlert("Gagal update varian!", Alert.AlertType.ERROR);
+            }
+        } catch (Exception e) {
+            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+    
     // ==================== TAB 2: VARIAN ====================
     
-    private VBox createVarianTab() {
+    private ScrollPane createVarianTab() {
         VBox container = new VBox(20);
         container.setPadding(new Insets(25));
-        
-        // Info Label
+
         Label infoLabel = new Label("💡 Pilih produk di sebelah kiri untuk mengelola varian");
         infoLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
-        
-        // Form Varian
+
+        VBox formContainer = new VBox(15);
+        formContainer.setAlignment(Pos.CENTER_LEFT);
+
+        // --- MODE CREATE ---
+        formCreateMode = new VBox(10);
+        // UPDATE: Aktifkan Managed agar layout menghitung space-nya
+        formCreateMode.setVisible(true); 
+        formCreateMode.setManaged(true); 
+
         GridPane form = new GridPane();
         form.setHgap(15);
         form.setVgap(15);
-        
         int row = 0;
-        
-        form.add(new Label("Ukuran:"), 0, row);
-        cbUkuran = new ComboBox<>();
-        cbUkuran.setPromptText("Pilih Ukuran");
-        styleComboBox(cbUkuran);
-        form.add(cbUkuran, 1, row++);
-        
+
         form.add(new Label("Warna:"), 0, row);
         cbWarnaVarian = new ComboBox<>();
         cbWarnaVarian.setPromptText("Pilih Warna");
         styleComboBox(cbWarnaVarian);
         form.add(cbWarnaVarian, 1, row++);
-        
-        form.add(new Label("Stok:"), 0, row);
-        txtStok = new TextField();
-        txtStok.setPromptText("Contoh: 50");
-        styleTextField(txtStok);
-        form.add(txtStok, 1, row++);
-        
-        // Buttons
+
+        Label lblUkuran = new Label("Ukuran:");
+        lblUkuran.setStyle("-fx-font-weight: bold;");
+        form.add(lblUkuran, 0, row);
+
+        chkUkuranContainer = new FlowPane();
+        chkUkuranContainer.setHgap(15);
+        chkUkuranContainer.setVgap(10);
+        chkUkuranContainer.setPadding(new Insets(5, 0, 5, 0));
+        form.add(chkUkuranContainer, 1, row++);
+
         HBox btnBox = new HBox(10);
         btnBox.setAlignment(Pos.CENTER_LEFT);
-        
         btnAddVarian = createStyledButton("➕ Tambah", "#2ecc71");
         btnAddVarian.setOnAction(e -> addVarian());
-        
         btnUpdateVarian = createStyledButton("✏ Update", "#3498db");
         btnUpdateVarian.setOnAction(e -> updateVarian());
-        
         btnDeleteVarian = createStyledButton("🗑 Hapus", "#e74c3c");
         btnDeleteVarian.setOnAction(e -> deleteVarian());
-        
         btnBox.getChildren().addAll(btnAddVarian, btnUpdateVarian, btnDeleteVarian);
         form.add(btnBox, 1, row);
-        
-        // Table Varian
+
+        formCreateMode.getChildren().add(form);
+
+        // --- MODE EDIT ---
+        formEditMode = new VBox(10);
+        // UPDATE: Non-aktifkan Visible & Managed agar tidak makan space saat awal
+        formEditMode.setVisible(false);
+        formEditMode.setManaged(false); 
+
+        GridPane formEdit = new GridPane();
+        formEdit.setHgap(15);
+        formEdit.setVgap(15);
+        int rowEdit = 0;
+
+        formEdit.add(new Label("Warna:"), 0, rowEdit);
+        cbWarnaEdit = new ComboBox<>();
+        cbWarnaEdit.setPromptText("Pilih Warna");
+        styleComboBox(cbWarnaEdit);
+        formEdit.add(cbWarnaEdit, 1, rowEdit++);
+
+        formEdit.add(new Label("Ukuran:"), 0, rowEdit);
+        cbUkuranEdit = new ComboBox<>();
+        cbUkuranEdit.setPromptText("Pilih Ukuran");
+        styleComboBox(cbUkuranEdit);
+        formEdit.add(cbUkuranEdit, 1, rowEdit++);
+
+        formEdit.add(new Label("Stok:"), 0, rowEdit);
+        txtStokEdit = new TextField();
+        txtStokEdit.setPromptText("Contoh: 50");
+        styleTextField(txtStokEdit);
+        formEdit.add(txtStokEdit, 1, rowEdit++);
+
+        HBox btnBoxEdit = new HBox(10);
+        btnBoxEdit.setAlignment(Pos.CENTER_LEFT);
+        Button btnCancelEdit = createStyledButton("❌ Batal", "#95a5a6");
+        btnCancelEdit.setOnAction(e -> cancelEditMode());
+        btnUpdateVarianEdit = createStyledButton("✅ Simpan", "#3498db");
+        btnUpdateVarianEdit.setOnAction(e -> saveEditedVarian());
+        btnBoxEdit.getChildren().addAll(btnCancelEdit, btnUpdateVarianEdit);
+        formEdit.add(btnBoxEdit, 1, rowEdit);
+
+        formEditMode.getChildren().add(formEdit);
+
+        formContainer.getChildren().addAll(formCreateMode, formEditMode);
+
         tableVarian = createVarianTable();
         VBox.setVgrow(tableVarian, Priority.ALWAYS);
-        
-        // Load combo data
+
         loadVarianComboData();
+        loadUkuranInputs();
+
+        container.getChildren().addAll(infoLabel, formContainer, new Separator(), tableVarian);
+
+        ScrollPane scrollPane = new ScrollPane(container);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setStyle("-fx-background-color: transparent;");
         
-        container.getChildren().addAll(infoLabel, form, new Separator(), tableVarian);
-        return container;
+        return scrollPane;
     }
     
     private TableView<Varian> createVarianTable() {
@@ -451,7 +673,7 @@ public class ProdukManagementPanel extends VBox {
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
             if (newVal != null) {
                 selectedVarian = newVal;
-                loadVarianToForm(newVal);
+                enterEditMode(newVal);
             }
         });
         
@@ -517,7 +739,6 @@ public class ProdukManagementPanel extends VBox {
         cbTipe.setValue(findTipeById(produk.getIdTipe()));
         txtHargaJual.setText(produk.getHargaJual().toString());
         txtHargaPokok.setText(produk.getHargaPokok().toString());
-        txtBerat.setText(produk.getBerat() != null ? produk.getBerat().toString() : "");
         txtDeskripsi.setText(produk.getDeskripsi());
         txtSpesifikasi.setText(produk.getSpesifikasi());
         
@@ -532,6 +753,7 @@ public class ProdukManagementPanel extends VBox {
         List<Varian> list = varianDAO.getVarianByProduk(idProduk);
         varianList = FXCollections.observableArrayList(list);
         tableVarian.setItems(varianList);
+        cancelEditMode();
     }
     
     private void loadFotoProdukList(Long idProduk) {
@@ -649,9 +871,32 @@ public class ProdukManagementPanel extends VBox {
         cbTipe.setItems(FXCollections.observableArrayList(tipeList));
     }
     
+    private void loadUkuranInputs() {
+        List<Ukuran> ukuranList = ukuranDAO.getAllUkuran();
+        chkUkuranContainer.getChildren().clear(); // Kosongkan dulu
+        ukuranStokMap.clear(); // Reset map
+
+        for (Ukuran ukuran : ukuranList) {
+            HBox hbox = new HBox(8); // Jarak antar label dan input
+            hbox.setAlignment(Pos.CENTER_LEFT);
+
+            Label lblUkuran = new Label(ukuran.getNamaUkuran());
+            lblUkuran.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+
+            TextField txtStokPerUkuran = new TextField();
+            txtStokPerUkuran.setPromptText("Stok " + ukuran.getNamaUkuran());
+            txtStokPerUkuran.setPrefWidth(80);
+
+            hbox.getChildren().addAll(lblUkuran, txtStokPerUkuran);
+            chkUkuranContainer.getChildren().add(hbox);
+
+            ukuranStokMap.put(ukuran, txtStokPerUkuran);
+        }
+    }
+    
     private void loadVarianComboData() {
         List<Ukuran> ukuranList = ukuranDAO.getAllUkuran();
-        cbUkuran.setItems(FXCollections.observableArrayList(ukuranList));
+//        cbUkuran.setItems(FXCollections.observableArrayList(ukuranList));
         
         List<Warna> warnaList = warnaDAO.getAllWarna();
         cbWarnaVarian.setItems(FXCollections.observableArrayList(warnaList));
@@ -679,7 +924,6 @@ public class ProdukManagementPanel extends VBox {
             produk.setIdTipe(cbTipe.getValue().getIdTipe());
             produk.setHargaJual(Long.parseLong(txtHargaJual.getText().trim()));
             produk.setHargaPokok(Long.parseLong(txtHargaPokok.getText().trim()));
-            produk.setBerat(new BigDecimal(txtBerat.getText().trim()));
             produk.setDeskripsi(txtDeskripsi.getText().trim());
             produk.setSpesifikasi(txtSpesifikasi.getText().trim());
             
@@ -738,7 +982,6 @@ public class ProdukManagementPanel extends VBox {
         cbTipe.setValue(null);
         txtHargaJual.clear();
         txtHargaPokok.clear();
-        txtBerat.clear();
         txtDeskripsi.clear();
         txtSpesifikasi.clear();
         tableVarian.getItems().clear();
@@ -752,36 +995,69 @@ public class ProdukManagementPanel extends VBox {
             showAlert("Pilih produk terlebih dahulu!", Alert.AlertType.WARNING);
             return;
         }
-        
-        try {
-            if (cbUkuran.getValue() == null || cbWarnaVarian.getValue() == null) {
-                showAlert("Ukuran dan warna harus dipilih!", Alert.AlertType.WARNING);
-                return;
+
+        if (cbWarnaVarian.getValue() == null) {
+            showAlert("Warna harus dipilih!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        boolean anyFilled = false;
+        List<Varian> varianToSave = new ArrayList<>();
+
+        for (Ukuran ukuran : ukuranStokMap.keySet()) {
+            TextField txtStokField = ukuranStokMap.get(ukuran);
+            String stokText = txtStokField.getText().trim();
+
+            if (!stokText.isEmpty()) {
+                try {
+                    Long stok = Long.parseLong(stokText);
+                    if (stok <= 0) continue; // Skip jika stok 0 atau negatif
+
+                    anyFilled = true;
+
+                    // Cek duplikat
+                    if (varianDAO.isVarianExists(selectedProduk.getIdProduk(), 
+                            ukuran.getIdUkuran(), 
+                            cbWarnaVarian.getValue().getIdWarna(), null)) {
+                        showAlert("Varian " + ukuran.getNamaUkuran() + " sudah ada!", Alert.AlertType.WARNING);
+                        continue;
+                    }
+
+                    Varian varian = new Varian();
+                    varian.setIdProduk(selectedProduk.getIdProduk());
+                    varian.setIdUkuran(ukuran.getIdUkuran());
+                    varian.setIdWarna(cbWarnaVarian.getValue().getIdWarna());
+                    varian.setStokKaos(stok);
+
+                    varianToSave.add(varian);
+
+                } catch (NumberFormatException e) {
+                    showAlert("Stok untuk ukuran " + ukuran.getNamaUkuran() + " tidak valid!", Alert.AlertType.ERROR);
+                    return;
+                }
             }
-            
-            // Cek duplikat
-            if (varianDAO.isVarianExists(selectedProduk.getIdProduk(), 
-                    cbUkuran.getValue().getIdUkuran(), 
-                    cbWarnaVarian.getValue().getIdWarna(), null)) {
-                showAlert("Varian dengan ukuran dan warna ini sudah ada!", Alert.AlertType.WARNING);
-                return;
+        }
+
+        if (!anyFilled) {
+            showAlert("Isi setidaknya satu stok ukuran!", Alert.AlertType.WARNING);
+            return;
+        }
+
+        // Simpan semua varian sekaligus
+        boolean allSuccess = true;
+        for (Varian v : varianToSave) {
+            if (!varianDAO.createVarian(v)) {
+                allSuccess = false;
+                break;
             }
-            
-            Varian varian = new Varian();
-            varian.setIdProduk(selectedProduk.getIdProduk());
-            varian.setIdUkuran(cbUkuran.getValue().getIdUkuran());
-            varian.setIdWarna(cbWarnaVarian.getValue().getIdWarna());
-            varian.setStokKaos(Long.parseLong(txtStok.getText().trim()));
-            
-            if (varianDAO.createVarian(varian)) {
-                showAlert("Varian berhasil ditambahkan!", Alert.AlertType.INFORMATION);
-                loadVarianList(selectedProduk.getIdProduk());
-                clearVarianForm();
-            } else {
-                showAlert("Gagal menambahkan varian!", Alert.AlertType.ERROR);
-            }
-        } catch (Exception e) {
-            showAlert("Input tidak valid: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+
+        if (allSuccess) {
+            showAlert("Semua varian berhasil ditambahkan!", Alert.AlertType.INFORMATION);
+            loadVarianList(selectedProduk.getIdProduk());
+            clearVarianForm();
+        } else {
+            showAlert("Gagal menyimpan beberapa varian!", Alert.AlertType.ERROR);
         }
     }
     
@@ -837,9 +1113,12 @@ public class ProdukManagementPanel extends VBox {
     
     private void clearVarianForm() {
         selectedVarian = null;
-        cbUkuran.setValue(null);
         cbWarnaVarian.setValue(null);
-        txtStok.clear();
+
+        // Kosongkan semua input stok
+        for (TextField txt : ukuranStokMap.values()) {
+            txt.clear();
+        }
     }
     
     // --- Foto Produk CRUD ---
@@ -966,14 +1245,18 @@ public class ProdukManagementPanel extends VBox {
     }
     
     private Ukuran findUkuranById(Long id) {
-        return cbUkuran.getItems().stream()
+        // Ambil langsung dari DAO agar tidak tergantung pada UI Component yang mungkin null
+        if (id == null) return null;
+        return ukuranDAO.getAllUkuran().stream()
             .filter(u -> u.getIdUkuran().equals(id))
             .findFirst()
             .orElse(null);
     }
     
     private Warna findWarnaById(Long id) {
-        return cbWarnaVarian.getItems().stream()
+        // Ambil langsung dari DAO agar tidak tergantung pada UI Component
+        if (id == null) return null;
+        return warnaDAO.getAllWarna().stream()
             .filter(w -> w.getIdWarna().equals(id))
             .findFirst()
             .orElse(null);

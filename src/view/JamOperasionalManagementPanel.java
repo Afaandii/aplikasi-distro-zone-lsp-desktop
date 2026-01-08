@@ -144,7 +144,7 @@ public class JamOperasionalManagementPanel extends VBox {
         Button btnAdd = createModernButton("➕ Tambah", "#2ecc71", "#27ae60");
         btnAdd.setOnAction(e -> showAddDialog());
 
-        Button btnEdit = createModernButton("✏️ Edit", "#3498db", "#2980b9");
+        Button btnEdit = createModernButton("✏ Edit", "#3498db", "#2980b9");
         btnEdit.setOnAction(e -> showEditDialog());
 
         Button btnDelete = createModernButton("🚫 Tutup", "#e74c3c", "#c0392b");

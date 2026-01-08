@@ -42,4 +42,17 @@ public class Ukuran {
     public String toString() {
         return namaUkuran;
     }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Ukuran ukuran = (Ukuran) o;
+        return idUkuran != null && idUkuran.equals(ukuran.idUkuran);
+    }
+
+    @Override
+    public int hashCode() {
+        return idUkuran != null ? idUkuran.hashCode() : 0;
+    }
 }

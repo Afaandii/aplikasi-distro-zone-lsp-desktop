@@ -107,30 +107,29 @@ public class DashboardAdmin extends Application {
     // Helper: buat node dashboard
     private javafx.scene.Node createDashboardNode() {
         VBox content = new VBox(25);
-        content.setAlignment(Pos.TOP_LEFT);
+        content.setAlignment(Pos.CENTER); // Pusatkan semua komponen
+        content.setPadding(new Insets(30));
+        content.setStyle("-fx-background-color: #f8f9fa;"); // Warna latar belakang yang lembut
 
-        VBox headerBox = new VBox(5);
-        Label welcomeText = new Label("Selamat Datang! 👋");
-        welcomeText.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        // Header "Selamat Datang"
+        Label welcomeText = new Label("Selamat Datang, " + currentUser.getNama() + "! 👋");
+        welcomeText.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 16));
         welcomeText.setTextFill(Color.web("#7f8c8d"));
 
+        // Judul Dashboard
         Label header = new Label("Dashboard Admin");
         header.setFont(Font.font("Segoe UI", FontWeight.BOLD, 30));
         header.setTextFill(Color.web("#2c3e50"));
 
-        headerBox.getChildren().addAll(welcomeText, header);
+        // Teks Petunjuk Utama
+        Label instruction = new Label("Pilih menu di sebelah kiri untuk mengelola produk");
+        instruction.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 18));
+        instruction.setTextFill(Color.web("#2c3e50"));
+        instruction.setStyle("-fx-font-weight: bold; -fx-text-alignment: center;");
 
-        GridPane statsGrid = new GridPane();
-        statsGrid.setHgap(20);
-        statsGrid.setVgap(20);
+        // Tambahkan semua ke container
+        content.getChildren().addAll(welcomeText, header, instruction);
 
-        for (int i = 0; i < 4; i++) {
-            ColumnConstraints col = new ColumnConstraints();
-            col.setPercentWidth(25);
-            statsGrid.getColumnConstraints().add(col);
-        }
-
-        content.getChildren().addAll(headerBox, statsGrid);
         return content;
     }
     
