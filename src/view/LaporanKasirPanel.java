@@ -30,6 +30,7 @@ public class LaporanKasirPanel extends VBox {
     private TableView<Transaksi> tableTransaksi;
     private DatePicker dpStartDate;
     private DatePicker dpEndDate;
+    private ComboBox<String> cmbMetodePembayaran;
     private Label lblTotalPenjualan;
     private Label lblJumlahTransaksi;
     private Label lblRataRata;
@@ -67,6 +68,8 @@ public class LaporanKasirPanel extends VBox {
         
         this.getChildren().addAll(headerLabel, filterSection, statsCards, tableSection);
     }
+    
+    
     
     private VBox createFilterSection() {
         VBox filterBox = new VBox(15);
@@ -116,6 +119,23 @@ public class LaporanKasirPanel extends VBox {
             "-fx-background-radius: 5; -fx-cursor: hand;"));
         btnFilter.setOnAction(e -> loadLaporanData());
         
+        // Metode Pembayaran Filter
+        VBox metodeBox = new VBox(5);
+        Label lblMetode = new Label("Metode Pembayaran");
+        lblMetode.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        cmbMetodePembayaran = new ComboBox<>();
+        cmbMetodePembayaran.getItems().addAll("Semua", "💵 Tunai", "🏦 Transfer Bank", "📱 QRIS");
+        cmbMetodePembayaran.setValue("Semua");
+        cmbMetodePembayaran.setPrefWidth(180);
+        cmbMetodePembayaran.setStyle("-fx-background-radius: 5;");
+        metodeBox.getChildren().addAll(lblMetode, cmbMetodePembayaran);
+        
+        cmbMetodePembayaran.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (dpStartDate.getValue() != null && dpEndDate.getValue() != null) {
+                loadData(dpStartDate.getValue(), dpEndDate.getValue());
+            }
+        });
+        
         // Export Button
         Button btnExport = new Button("Export PDF");
         btnExport.setPrefWidth(140);
@@ -136,7 +156,7 @@ public class LaporanKasirPanel extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         
-        dateFilterBox.getChildren().addAll(startDateBox, endDateBox, btnFilter, spacer, btnExport);
+        dateFilterBox.getChildren().addAll(startDateBox, endDateBox, btnFilter, metodeBox, spacer, btnExport);
         filterBox.getChildren().addAll(filterLabel, dateFilterBox);
         
         return filterBox;
@@ -350,15 +370,16 @@ public class LaporanKasirPanel extends VBox {
         Long idKasir = currentUser.getIdUser();
         Date sqlStartDate = Date.valueOf(startDate);
         Date sqlEndDate = Date.valueOf(endDate);
+        String selectedMetode = cmbMetodePembayaran.getValue();
         
         // Load transaksi data
-        List<Transaksi> transaksiList = transaksiDAO.getTransaksiByKasir(idKasir, sqlStartDate, sqlEndDate);
+        List<Transaksi> transaksiList = transaksiDAO.getTransaksiByKasir(idKasir, sqlStartDate, sqlEndDate, selectedMetode);
         ObservableList<Transaksi> observableList = FXCollections.observableArrayList(transaksiList);
         tableTransaksi.setItems(observableList);
         
         // Update statistics
-        Long totalPenjualan = transaksiDAO.getTotalPenjualan(idKasir, sqlStartDate, sqlEndDate);
-        int jumlahTransaksi = transaksiDAO.getJumlahTransaksi(idKasir, sqlStartDate, sqlEndDate);
+        Long totalPenjualan = transaksiDAO.getTotalPenjualan(idKasir, sqlStartDate, sqlEndDate, selectedMetode);
+        int jumlahTransaksi = transaksiDAO.getJumlahTransaksi(idKasir, sqlStartDate, sqlEndDate, selectedMetode);
         Long rataRata = jumlahTransaksi > 0 ? totalPenjualan / jumlahTransaksi : 0;
         
         lblTotalPenjualan.setText(currencyFormat.format(totalPenjualan));
