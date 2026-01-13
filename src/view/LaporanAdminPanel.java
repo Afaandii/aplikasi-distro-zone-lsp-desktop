@@ -34,6 +34,8 @@ public class LaporanAdminPanel extends VBox {
     private TableView<Transaksi> tableTransaksi;
     private DatePicker dpStartDate;
     private DatePicker dpEndDate;
+    private ComboBox<String> cmbMetodePembayaran;
+    private ComboBox<String> cmbKasir;
     private TextField txtSearch;
     
     private Label lblTotalPenjualan;
@@ -139,15 +141,16 @@ public class LaporanAdminPanel extends VBox {
         filterBox.setPadding(new Insets(20));
         filterBox.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
                           "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
-        
+
         Label filterLabel = new Label("Filter & Pencarian");
         filterLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
         filterLabel.setStyle("-fx-text-fill: #34495e;");
-        
-        // First row: Date filters
-        HBox dateFilterBox = new HBox(15);
-        dateFilterBox.setAlignment(Pos.CENTER_LEFT);
-        
+
+        // === ROW 1: Tanggal + Periode Cepat + Tombol Filter ===
+        HBox row1 = new HBox(15);
+        row1.setAlignment(Pos.CENTER_LEFT);
+
+        // Tanggal Mulai
         VBox startDateBox = new VBox(5);
         Label lblStart = new Label("Tanggal Mulai");
         lblStart.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
@@ -155,18 +158,19 @@ public class LaporanAdminPanel extends VBox {
         dpStartDate.setPrefWidth(180);
         dpStartDate.setStyle("-fx-background-radius: 5;");
         startDateBox.getChildren().addAll(lblStart, dpStartDate);
-        
+
         dpStartDate.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null && dpEndDate.getValue() != null) {
                 if (newVal.isAfter(dpEndDate.getValue())) {
                     showAlert("Error", "Tanggal mulai tidak boleh lebih besar dari tanggal akhir", Alert.AlertType.ERROR);
-                    dpStartDate.setValue(old); // Kembalikan ke nilai lama
+                    dpStartDate.setValue(old);
                 } else {
-                    loadLaporanData(); // 🔥 UPDATE DATA OTOMATIS
+                    loadLaporanData();
                 }
             }
         });
-        
+
+        // Tanggal Akhir
         VBox endDateBox = new VBox(5);
         Label lblEnd = new Label("Tanggal Akhir");
         lblEnd.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
@@ -174,23 +178,22 @@ public class LaporanAdminPanel extends VBox {
         dpEndDate.setPrefWidth(180);
         dpEndDate.setStyle("-fx-background-radius: 5;");
         endDateBox.getChildren().addAll(lblEnd, dpEndDate);
-        
+
         dpEndDate.valueProperty().addListener((obs, old, newVal) -> {
             if (newVal != null && dpStartDate.getValue() != null) {
                 if (newVal.isBefore(dpStartDate.getValue())) {
                     showAlert("Error", "Tanggal akhir tidak boleh lebih kecil dari tanggal mulai", Alert.AlertType.ERROR);
-                    dpEndDate.setValue(old); // Kembalikan ke nilai lama
+                    dpEndDate.setValue(old);
                 } else {
-                    loadLaporanData(); // 🔥 UPDATE DATA OTOMATIS
+                    loadLaporanData();
                 }
             }
         });
-        
-        // Quick date buttons
+
+        // Periode Cepat
         VBox quickDateBox = new VBox(5);
         Label lblQuick = new Label("Periode Cepat");
         lblQuick.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
-
         HBox quickButtons = new HBox(8);
         Button btnToday = createQuickDateButton("Hari Ini");
         Button btnWeek = createQuickDateButton("Minggu Ini");
@@ -199,46 +202,23 @@ public class LaporanAdminPanel extends VBox {
         btnToday.setOnAction(e -> {
             dpStartDate.setValue(LocalDate.now());
             dpEndDate.setValue(LocalDate.now());
-            loadLaporanData(); // 🔥 PANGGIL UNTUK UPDATE DATA
+            loadLaporanData();
         });
-
         btnWeek.setOnAction(e -> {
             dpStartDate.setValue(LocalDate.now().minusDays(7));
             dpEndDate.setValue(LocalDate.now());
-            loadLaporanData(); // 🔥 PANGGIL UNTUK UPDATE DATA
+            loadLaporanData();
         });
-
         btnMonth.setOnAction(e -> {
             dpStartDate.setValue(LocalDate.now().withDayOfMonth(1));
             dpEndDate.setValue(LocalDate.now());
-            loadLaporanData(); // 🔥 PANGGIL UNTUK UPDATE DATA
+            loadLaporanData();
         });
 
         quickButtons.getChildren().addAll(btnToday, btnWeek, btnMonth);
         quickDateBox.getChildren().addAll(lblQuick, quickButtons);
-        
-        dateFilterBox.getChildren().addAll(startDateBox, endDateBox, quickDateBox);
-        
-        // Second row: Combo box filters
-        
-        
-        // Third row: Search and action buttons
-        HBox searchBox = new HBox(15);
-        searchBox.setAlignment(Pos.CENTER_LEFT);
-        
-        VBox searchFieldBox = new VBox(5);
-        Label lblSearch = new Label("Pencarian");
-        lblSearch.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
-        txtSearch = new TextField();
-        txtSearch.setPrefWidth(300);
-        txtSearch.setPromptText("Cari kode transaksi atau nama customer...");
-        txtSearch.setStyle("-fx-background-radius: 5;");
-        txtSearch.textProperty().addListener((obs, old, newVal) -> applyFilters());
-        searchFieldBox.getChildren().addAll(lblSearch, txtSearch);
-        
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        
+
+        // 🔥 TOMBOL FILTER DI SINI — DI DALAM ROW1
         Button btnFilter = new Button("🔍 Tampilkan Laporan");
         btnFilter.setPrefWidth(180);
         btnFilter.setPrefHeight(35);
@@ -254,41 +234,87 @@ public class LaporanAdminPanel extends VBox {
             "-fx-font-size: 14px; -fx-font-weight: bold; " +
             "-fx-background-radius: 5; -fx-cursor: hand;"));
         btnFilter.setOnAction(e -> loadLaporanData());
-        
+
+        // Tambahkan SEMUA ke row1 → termasuk btnFilter di akhir
+        row1.getChildren().addAll(startDateBox, endDateBox,btnFilter, quickDateBox);
+
+        // === ROW 2: Metode Pembayaran & Filter Kasir ===
+        HBox row2 = new HBox(15);
+        row2.setAlignment(Pos.CENTER_LEFT);
+
+        // Metode Pembayaran
+        VBox metodeBox = new VBox(5);
+        Label lblMetode = new Label("Metode Pembayaran");
+        lblMetode.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        cmbMetodePembayaran = new ComboBox<>();
+        cmbMetodePembayaran.setPrefWidth(180);
+        cmbMetodePembayaran.setStyle("-fx-background-radius: 5;");
+        List<String> metodeList = transaksiDAO.getDistinctMetodePembayaran();
+        cmbMetodePembayaran.getItems().add("Semua");
+        cmbMetodePembayaran.getItems().addAll(metodeList);
+        cmbMetodePembayaran.setValue("Semua");
+        metodeBox.getChildren().addAll(lblMetode, cmbMetodePembayaran);
+
+        // Kasir
+        VBox kasirBox = new VBox(5);
+        Label lblKasir = new Label("Filter Kasir");
+        lblKasir.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        cmbKasir = new ComboBox<>();
+        cmbKasir.setPrefWidth(180);
+        cmbKasir.setStyle("-fx-background-radius: 5;");
+        List<String> kasirList = transaksiDAO.getDistinctKasir();
+        cmbKasir.getItems().add("Semua");
+        cmbKasir.getItems().addAll(kasirList);
+        cmbKasir.setValue("Semua");
+        kasirBox.getChildren().addAll(lblKasir, cmbKasir);
+
+        // Listener otomatis
+        cmbMetodePembayaran.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
+        cmbKasir.valueProperty().addListener((obs, oldVal, newVal) -> applyFilters());
+
+        row2.getChildren().addAll(metodeBox, kasirBox);
+
+        // === ROW 3: Pencarian + Export ===
+        HBox searchBox = new HBox(15);
+        searchBox.setAlignment(Pos.CENTER_LEFT);
+
+        VBox searchFieldBox = new VBox(5);
+        Label lblSearch = new Label("Pencarian");
+        lblSearch.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13px;");
+        txtSearch = new TextField();
+        txtSearch.setPrefWidth(300);
+        txtSearch.setPromptText("Cari kode transaksi atau nama customer...");
+        txtSearch.setStyle("-fx-background-radius: 5;");
+        txtSearch.textProperty().addListener((obs, old, newVal) -> applyFilters());
+        searchFieldBox.getChildren().addAll(lblSearch, txtSearch);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // 🔥 TOMBOL EXPORT tetap di bawah
         Button btnExport = new Button("📄 Export PDF");
         btnExport.setPrefWidth(140);
         btnExport.setPrefHeight(35);
         btnExport.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; " +
                           "-fx-font-size: 14px; -fx-font-weight: bold; " +
                           "-fx-background-radius: 5; -fx-cursor: hand;");
-        btnExport.setOnMouseEntered(e -> btnExport.setStyle(
-            "-fx-background-color: #229954; -fx-text-fill: white; " +
-            "-fx-font-size: 14px; -fx-font-weight: bold; " +
-            "-fx-background-radius: 5; -fx-cursor: hand;"));
-        btnExport.setOnMouseExited(e -> btnExport.setStyle(
-            "-fx-background-color: #27ae60; -fx-text-fill: white; " +
-            "-fx-font-size: 14px; -fx-font-weight: bold; " +
-            "-fx-background-radius: 5; -fx-cursor: hand;"));
         btnExport.setOnAction(e -> exportToPDF());
-        
+
         Button btnExportExcel = new Button("📊 Export Excel");
         btnExportExcel.setPrefWidth(140);
         btnExportExcel.setPrefHeight(35);
         btnExportExcel.setStyle("-fx-background-color: #16a085; -fx-text-fill: white; " +
                                "-fx-font-size: 14px; -fx-font-weight: bold; " +
                                "-fx-background-radius: 5; -fx-cursor: hand;");
-        btnExportExcel.setOnMouseEntered(e -> btnExportExcel.setStyle(
-            "-fx-background-color: #138d75; -fx-text-fill: white; " +
-            "-fx-font-size: 14px; -fx-font-weight: bold; " +
-            "-fx-background-radius: 5; -fx-cursor: hand;"));
-        btnExportExcel.setOnMouseExited(e -> btnExportExcel.setStyle(
-            "-fx-background-color: #16a085; -fx-text-fill: white; " +
-            "-fx-font-size: 14px; -fx-font-weight: bold; " +
-            "-fx-background-radius: 5; -fx-cursor: hand;"));
         btnExportExcel.setOnAction(e -> exportToExcel());
-        
-        searchBox.getChildren().addAll(searchFieldBox, spacer, btnFilter, btnExport, btnExportExcel);
-        
+
+        searchBox.getChildren().addAll(searchFieldBox, spacer, btnExport, btnExportExcel);
+
+        // === GABUNG SEMUA KE filterBox ===
+        VBox dateFilterBox = new VBox(15);
+        dateFilterBox.setAlignment(Pos.TOP_LEFT);
+        dateFilterBox.getChildren().addAll(row1, row2);
+
         filterBox.getChildren().addAll(filterLabel, dateFilterBox, searchBox);
         return filterBox;
     }
@@ -594,6 +620,7 @@ public class LaporanAdminPanel extends VBox {
         // Load all transaksi data (admin sees all)
         allTransaksiData = transaksiDAO.getAllTransaksi(sqlStartDate, sqlEndDate);
         
+        
         // Apply filters
         applyFilters();
         
@@ -664,7 +691,7 @@ public class LaporanAdminPanel extends VBox {
     private void applyFilters() {
         List<Transaksi> filteredList = new ArrayList<>(allTransaksiData);
 
-        // Filter by search text — cari di kode transaksi, kasir, metode, status
+        // Filter by search text
         String searchText = txtSearch.getText();
         if (searchText != null && !searchText.trim().isEmpty()) {
             String search = searchText.toLowerCase().trim();
@@ -678,10 +705,26 @@ public class LaporanAdminPanel extends VBox {
                 .collect(Collectors.toList());
         }
 
+        // Filter by metode pembayaran
+        String selectedMetode = cmbMetodePembayaran.getValue();
+        if (!"Semua".equals(selectedMetode)) {
+            filteredList = filteredList.stream()
+                .filter(t -> selectedMetode.equals(t.getMetodePembayaran()))
+                .collect(Collectors.toList());
+        }
+
+        // Filter by kasir
+        String selectedKasir = cmbKasir.getValue();
+        if (!"Semua".equals(selectedKasir)) {
+            filteredList = filteredList.stream()
+                .filter(t -> selectedKasir.equals(t.getNamaKasir()))
+                .collect(Collectors.toList());
+        }
+
         ObservableList<Transaksi> observableList = FXCollections.observableArrayList(filteredList);
         tableTransaksi.setItems(observableList);
 
-        // 🔥 PERBARUI STATISTIK & CHART SAAT FILTER BERUBAH
+        // Update statistics & charts
         updateStatisticsFromFilteredData(filteredList);
         updateChartsFromFilteredData(filteredList);
         lblCount.setText("Total: " + tableTransaksi.getItems().size() + " transaksi");

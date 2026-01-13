@@ -5,6 +5,7 @@
         <group>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Role.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Produk.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/ProdukViewKasirPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/DashboardAdmin.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Merk.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/TransaksiDAO.java</file>
@@ -13,19 +14,25 @@
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/LoginPage.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Warna.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/UkuranManagementPanel.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/LaporanKasirPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/JamOperasionalDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/CardPane.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/DashboardKasir.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/JamOperasionalManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/WarnaDAO.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/LaporanRugiLaba.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Tipe.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/RoleDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/JamOperasional.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/ProdukManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/WarnaManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/DetailTransaksiDAO.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/FotoProduk.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/LaporanAdminPanel.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/TransaksiKasirPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/KaryawanManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/UserDAO.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/FotoProdukManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/config/SupabaseStorageConfig.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/MerkDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Transaksi.java</file>
@@ -33,13 +40,16 @@
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/TipeDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/LoadingScreen.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/ProdukDAO.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/Struk.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/TipeManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/VarianManagementPanel.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Ukuran.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/Varian.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/VarianDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/model/User.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/dao/FotoProdukDAO.java</file>
             <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/MerkManagementPanel.java</file>
+            <file>file:/C:/Users/HP/NetBeansProjects/aplikasi-distro-zone-desktop/src/view/DashboardKasirApp.java</file>
         </group>
     </open-files>
 </project-private>
