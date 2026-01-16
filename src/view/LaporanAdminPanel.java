@@ -27,6 +27,37 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Cell;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.UnitValue;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.ss.util.CellRangeAddress;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+
 public class LaporanAdminPanel extends VBox {
     
     private TransaksiDAO transaksiDAO;
@@ -887,13 +918,272 @@ public class LaporanAdminPanel extends VBox {
     }
     
     private void exportToPDF() {
-        showAlert("Info", "Fitur export PDF akan segera hadir!", Alert.AlertType.INFORMATION);
-        // TODO: Implement PDF export functionality
+        try {
+            // Ambil data terakhir yang ditampilkan (sudah difilter)
+            List<Transaksi> filteredList = tableTransaksi.getItems();
+
+            if (filteredList == null || filteredList.isEmpty()) {
+                showAlert("Info", "Tidak ada data untuk diekspor.", Alert.AlertType.INFORMATION);
+                return;
+            }
+
+            // Buka dialog save file
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Simpan Laporan PDF");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF Files", "*.pdf"));
+            fileChooser.setInitialFileName("Laporan_Admin_" + LocalDate.now() + ".pdf");
+
+            Stage stage = (Stage) this.getScene().getWindow();
+            File file = fileChooser.showSaveDialog(stage);
+
+            if (file == null) {
+                return; // User cancel
+            }
+
+            // Siapkan writer dan document
+            PdfWriter writer = new PdfWriter(file);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            Document document = new Document(pdfDoc);
+
+            // Gunakan font standar Helvetica
+            PdfFont font = PdfFontFactory.createFont(); // Default Helvetica
+
+            // Header utama
+            Paragraph title = new Paragraph("LAPORAN PENJUALAN ADMIN")
+                    .setFont(font)
+                    .setFontSize(20)
+                    .setBold()
+                    .setMarginBottom(5);
+            // Jangan pakai setHorizontalAlignment — biarkan default (left-aligned)
+            document.add(title);
+
+            // Informasi Filter
+            String startDateStr = dpStartDate.getValue() != null ? dpStartDate.getValue().toString() : "N/A";
+            String endDateStr = dpEndDate.getValue() != null ? dpEndDate.getValue().toString() : "N/A";
+            String metode = cmbMetodePembayaran.getValue() != null ? cmbMetodePembayaran.getValue() : "Semua";
+            String kasir = cmbKasir.getValue() != null ? cmbKasir.getValue() : "Semua";
+
+            Paragraph filterInfo = new Paragraph("Periode: " + startDateStr + " s/d " + endDateStr +
+                    " | Metode: " + metode + " | Kasir: " + kasir)
+                    .setFont(font)
+                    .setFontSize(12)
+                    .setMarginBottom(20);
+            document.add(filterInfo);
+
+            // Statistik (dalam box)
+            Table statsTable = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1, 1}))
+                    .setWidth(550)
+                    .setMarginBottom(25);
+
+            // Header statistik
+            statsTable.addHeaderCell(createStatsHeaderCell("Total Penjualan"))
+                      .addHeaderCell(createStatsHeaderCell("Jumlah Transaksi"))
+                      .addHeaderCell(createStatsHeaderCell("Rata-rata"))
+                      .addHeaderCell(createStatsHeaderCell("Laba Bersih"));
+
+            // Data statistik
+            Long totalPenjualan = filteredList.stream().mapToLong(Transaksi::getTotal).sum();
+            int jumlahTransaksi = filteredList.size();
+            Long rataRata = jumlahTransaksi > 0 ? totalPenjualan / jumlahTransaksi : 0;
+            Long labaBersih = calculateLabaRugiFromList(filteredList); // Implementasi sendiri
+
+            statsTable.addCell(createStatsDataCell(currencyFormat.format(totalPenjualan), ColorConstants.BLUE))
+                       .addCell(createStatsDataCell(String.valueOf(jumlahTransaksi), ColorConstants.RED))
+                       .addCell(createStatsDataCell(currencyFormat.format(rataRata), ColorConstants.ORANGE))
+                       .addCell(createStatsDataCell(currencyFormat.format(labaBersih), ColorConstants.GREEN));
+
+            document.add(statsTable);
+
+            // Judul tabel
+            Paragraph tableTitle = new Paragraph("Rincian Transaksi")
+                    .setFont(font)
+                    .setFontSize(14)
+                    .setBold()
+                    .setMarginBottom(10);
+            document.add(tableTitle);
+
+            // Kolom tabel (tanpa Customer dan Aksi)
+            Table transactionTable = new Table(UnitValue.createPercentArray(new float[]{0.5f, 1.5f, 1.5f, 1.5f, 1f, 1f, 1f}))
+                    .setWidth(550)
+                    .setMarginBottom(20);
+
+            // Header kolom
+            transactionTable.addHeaderCell(createHeaderCell("No"))
+                            .addHeaderCell(createHeaderCell("Kode Transaksi"))
+                            .addHeaderCell(createHeaderCell("Kasir"))
+                            .addHeaderCell(createHeaderCell("Tanggal"))
+                            .addHeaderCell(createHeaderCell("Metode"))
+                            .addHeaderCell(createHeaderCell("Total"))
+                            .addHeaderCell(createHeaderCell("Status"));
+
+            // Data transaksi
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
+
+            for (int i = 0; i < filteredList.size(); i++) {
+                Transaksi t = filteredList.get(i);
+                transactionTable.addCell(createDataCell(String.valueOf(i + 1), ColorConstants.BLACK));
+                transactionTable.addCell(createDataCell(t.getKodeTransaksi(), ColorConstants.BLACK));
+                transactionTable.addCell(createDataCell(t.getNamaKasir(), ColorConstants.BLACK));
+                transactionTable.addCell(createDataCell(t.getCreatedAt().toLocalDateTime().format(formatter), ColorConstants.BLACK));
+                transactionTable.addCell(createDataCell(t.getMetodePembayaran(), ColorConstants.BLACK));
+                transactionTable.addCell(createDataCell(currencyFormat.format(t.getTotal()), ColorConstants.BLACK));
+                String status = t.getStatusTransaksi().toUpperCase();
+                transactionTable.addCell(createDataCell(status,
+                        "SELESAI".equals(status) ? ColorConstants.GREEN : ColorConstants.RED));
+            }
+
+            document.add(transactionTable);
+
+            // Footer
+            Paragraph footer = new Paragraph("Dibuat oleh: Admin | Tanggal: " + LocalDate.now())
+                    .setFont(font)
+                    .setFontSize(10)
+                    .setMarginTop(30);
+            document.add(footer);
+
+            // Tutup dokumen
+            document.close();
+
+            // Konfirmasi
+            showAlert("Berhasil", "Laporan PDF berhasil disimpan ke:\n" + file.getAbsolutePath(), Alert.AlertType.INFORMATION);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Gagal membuat PDF: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+    // Helper method untuk header statistik
+    private Cell createStatsHeaderCell(String text) {
+        return new Cell()
+                .add(new Paragraph(text).setBold())
+                .setBackgroundColor(ColorConstants.LIGHT_GRAY)
+                .setPadding(8)
+                .setBorder(null);
+    }
+
+    // Helper method untuk data statistik
+    private Cell createStatsDataCell(String text, com.itextpdf.kernel.colors.Color color) {
+        return new Cell()
+                .add(new Paragraph(text).setFontColor(color).setBold())
+                .setPadding(8)
+                .setBorder(null);
+    }
+
+    // Helper method untuk header tabel
+    private Cell createHeaderCell(String text) {
+        return new Cell()
+                .add(new Paragraph(text).setBold())
+                .setBackgroundColor(ColorConstants.LIGHT_GRAY)
+                .setPadding(6)
+                .setBorder(null);
+    }
+
+    // Helper method untuk data tabel
+    private Cell createDataCell(String text, com.itextpdf.kernel.colors.Color color) {
+        return new Cell()
+                .add(new Paragraph(text).setFontColor(color))
+                .setPadding(6)
+                .setBorder(null);
     }
     
     private void exportToExcel() {
-        showAlert("Info", "Fitur export Excel akan segera hadir!", Alert.AlertType.INFORMATION);
-        // TODO: Implement Excel export functionality
+        try {
+            // Ambil data terakhir yang ditampilkan (sudah difilter)
+            List<Transaksi> filteredList = tableTransaksi.getItems();
+
+            if (filteredList == null || filteredList.isEmpty()) {
+                showAlert("Info", "Tidak ada data untuk diekspor.", Alert.AlertType.INFORMATION);
+                return;
+            }
+
+            // Buka dialog save file
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Simpan Laporan Excel");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel Files", "*.xlsx"));
+            fileChooser.setInitialFileName("Laporan_Admin_" + LocalDate.now() + ".xlsx");
+
+            Stage stage = (Stage) this.getScene().getWindow();
+            File file = fileChooser.showSaveDialog(stage);
+
+            if (file == null) {
+                return; // User cancel
+            }
+
+            // Buat workbook dan sheet
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Laporan Penjualan");
+
+            // Style untuk header
+            CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font headerFont = workbook.createFont(); // ✅ Gunakan FQN
+            headerFont.setBold(true);
+            headerFont.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+
+            // Style untuk data
+            CellStyle dataStyle = workbook.createCellStyle();
+            dataStyle.setBorderBottom(BorderStyle.THIN);
+            dataStyle.setBorderTop(BorderStyle.THIN);
+            dataStyle.setBorderLeft(BorderStyle.THIN);
+            dataStyle.setBorderRight(BorderStyle.THIN);
+
+            // Row 0: Header
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"No", "Kode Transaksi", "Kasir", "Tanggal", "Metode", "Total", "Status"};
+
+            for (int i = 0; i < headers.length; i++) {
+                // FIX: Use fully qualified name for POI Cell
+                org.apache.poi.ss.usermodel.Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Isi data
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
+
+            for (int i = 0; i < filteredList.size(); i++) {
+                Transaksi t = filteredList.get(i);
+                Row row = sheet.createRow(i + 1);
+
+                row.createCell(0).setCellValue(i + 1);
+                row.createCell(1).setCellValue(t.getKodeTransaksi());
+                row.createCell(2).setCellValue(t.getNamaKasir());
+                row.createCell(3).setCellValue(t.getCreatedAt().toLocalDateTime().format(formatter));
+                row.createCell(4).setCellValue(t.getMetodePembayaran());
+                row.createCell(5).setCellValue(t.getTotal());
+                row.createCell(6).setCellValue(t.getStatusTransaksi().toUpperCase());
+
+                // Set style
+                for (int j = 0; j < 7; j++) {
+                    row.getCell(j).setCellStyle(dataStyle);
+                }
+            }
+
+            // Auto-fit column width
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // Tulis ke file
+            FileOutputStream fileOut = new FileOutputStream(file);
+            workbook.write(fileOut);
+            fileOut.close();
+            workbook.close();
+
+            // Konfirmasi
+            showAlert("Berhasil", "Laporan Excel berhasil disimpan ke:\n" + file.getAbsolutePath(), Alert.AlertType.INFORMATION);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Gagal membuat Excel: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
     
     private void showAlert(String title, String content, Alert.AlertType type) {
